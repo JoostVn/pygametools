@@ -209,7 +209,7 @@ class Application(ABC):
         self.screen.fill(self.theme['background'])
         self.draw()
         self.container.draw(self.screen)
-        self.display_textlist(self.ticker.get_stats(), self.theme['5'], 5, 5)
+        self.display_textlist(self.ticker.get_stats(), self.theme['5'], 5, self.window_size[1]-15)
         pygame.display.flip()
 
     def set_gui(self, elements):

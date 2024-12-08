@@ -6,7 +6,7 @@ from pygametools.gui.elements import Button, Slider, Label
 class TestApp(Application):
 
     def __init__(self, window_size, simulation):
-        super().__init__(window_size, theme_name="default_dark")
+        super().__init__(window_size, theme_name="default_light")
 
         # Attributes for test object
         self.square_x = 200
