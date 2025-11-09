@@ -1,9 +1,8 @@
 """
 Elements:
     - Canvas: Rectangle that contains ALL other plot elements.
-    - PlotMetrics: contains all dimensions, positions, domains, and notifies elements
-      of changes. All element-specific dimensions are computed from this single 
-      source of truth via properties such that they are always up to date.
+    - PlotMetrics: contains top-level dimensions, positions, domains. Also 
+      notifies elements of changes. 
 
 
 
@@ -60,258 +59,35 @@ class Element(ABC):
         pass
 
 
-class Axes(Element):
+class PlotTheme:
 
-    def __init__(self, parent_canvas):
+    def __init__(self, **kwargs):
         """
-        Contains a rectangle within parent_canvas containing all plots.
+        Plot color and font properties.
         """
-        super().__init__(parent_canvas)
-
-    @property
-    def dim(self):
-        return self.metrics.dim - np.hstack([
-            self.metrics._axes_xpad.sum(),
-            self.metrics._axes_ypad.sum()]) 
-    def update_dimensions(self, **args):
-        pass
-
-    def draw(self):
-
-       
-        axes_top_left = (
-            self.metrics.xdom[0],
-            self.metrics.ydom[1])
-
-        self.pdraw.rect(
-            axes_top_left, self.dim, self.colors["axes_bg"],
-            self.colors["axes_line"], on_axes=True)
-
-
-class Title(Element):
-
-    def __init__(self, parent_canvas, title):
-        """
-        Contains the plot title and title dimensions, centered above axes.
-        """
-        self.pos = np.zeros(2)
-        self.title = title
-        super().__init__(parent_canvas)
-
-    def update_dimensions(self, **args):
-        """
-        Update the title position to a point centered above the axes.
-        """
-        # TODO: ref to metrics??
-        self.pos[0] = self.canvas.pad[0] + self.canvas.axes.dim[0] / 2
-        self.pos[1] = self.canvas.pad[1] / 2
-
-    def draw(self):
-        font, color =  self.fonts["title"]
-        self.pdraw.text(
-            self.title, font, color, self.pos, ha="center",
-            va="center", on_axes=False)
-
-
-class Axis(Element):
-
-    X = 0
-    Y = 1
-
-    FIXED_TICK_POSITIONS = 0
-    FIXED_TICK_VALUES = 1
-
-    LABELS_NUMERICAL = 0
-    LABELS_TEXT = 1
-
-
-    def __init__(self, parent_canvas, orientation, margin=0.1, length=3):
-        """
-
-
-        Parameters
-        ----------
-        parent_canvas : Canvas
-            Canvas to which the axis in linked.
-        margin : float, optional
-            margin between min, max bounds and the first, last ticks,
-            expressed as a ratio of the full domain width. The default is 0.1.
-
-        """
-        super().__init__(parent_canvas)
-        self.margin = margin
-        self.pos_ticks = np.empty((0,2))
-        self.pos_line = np.empty(2)
-        self.labels = None
-        self.length = length
-
-        # Orientation: determines whether X or Y axis
-        self.orientation = orientation
-
-        # Tick mode: either fixed locations or fixed values
-        self.tick_mode = None
-        self.label_mode = None
-
-        # axis_specific drawing paramaters
-        if self.orientation == Axis.X:
-            self.tick_direction = np.array((0, 1))
-            self.text_va = "bottom"
-            self.text_ha = "center"
-        if self.orientation == Axis.Y:
-            self.tick_direction = np.array((-1, 0))
-            self.text_va = "center"
-            self.text_ha = "right"
-
-    @property
-    def dom(self) -> np.ndarray:
-        """
-        Return the domain of this axis.
-        """
-        if self.orientation == Axis.X:
-            return self.canvas.metrics.xdom
-        if self.orientation == Axis.Y:
-            return self.canvas.metrics.ydom
-    
-    @property
-    def dom_other(self) -> np.ndarray:
-        """
-        Return the domain of the other axis (x if y, y if x).
-        """
-        if self.orientation == Axis.X:
-            return self.canvas.metrics.ydom
-        if self.orientation == Axis.Y:
-            return self.canvas.metrics.xdom
-
-    @property
-    def span(self) -> float:
-        """
-        Return the span of this axis domain.
-        """
-        return np.diff(self.dom)
-
-    @property
-    def crossing(self) -> float:
-        """
-        Return the coordinates of the other axis at which the axis crosses.
-        """
-        # TODO: implement optional crossing at 0 if in domain
-        return self.dom_other[0]
-
-    def update_dimensions(self, **kwargs):
-        """
-        Recalculate the ticks locations and axis line.
-        """
-        # Compute this axis line coordinates as [[x1, y1], [x2, y2]]
-        # First compute the diagonal line
-        pos_line = np.transpose(np.vstack([
-            self.canvas.metrics.xdom,
-            self.canvas.metrics.ydom]))
-    
-        # Then set fix the position to either vertical or horizontal    
-        pos_line[:,1-self.orientation] = self.crossing
-        self.pos_line = pos_line
-
-        # Update ticks
-        if self.tick_mode == Axis.FIXED_TICK_POSITIONS:
-
-            # Compute crossing ticks (diagnal for now)
-            n = kwargs.get("num_ticks", self.pos_ticks.shape[0])
-            offset = self.margin * self.span
-
-            start = pos_line[0]
-            start[self.orientation] += offset
-
-            end = pos_line[1]
-            end[self.orientation] -= offset
-
-            pos_ticks = np.linspace(start, end, n)
-
-            self.pos_ticks = pos_ticks
-
-        elif self.tick_mode == Axis.FIXED_TICK_VALUES:
-            raise NotImplementedError
-
-        # Update labels
-        if self.label_mode == Axis.LABELS_NUMERICAL:
-            self.update_numerical_labels()
-
-        elif self.label_mode == Axis.LABELS_TEXT:
-            raise NotImplementedError
-
-    def update_fixed_position_ticks(self):
-        """
-        TODO: move fixed tick part from function above here.
-        """
-        pass
-
-    def update_numerical_labels(self):
-        """
-        Get string numberical labels with appropiate formatting.
-        """
-        numbers = self.pos_ticks[:,self.orientation]
-        mag = floor(log10(max(abs(numbers))))
-
-        if -5 < mag < 5:
-            round_to = max(0, 1 - mag)
-            self.labels = [f"%.{round_to}f" % x for x in numbers]
-        else:
-            self.labels = [np.format_float_scientific(x, 1) for x in numbers]
-
-    def set_num_ticks(self, num_ticks):
-        """
-        Set a fixed number of evenly spaced tick locations
-
-        Ticks will change their value to keep their relative location.
-        """
-        self.tick_mode = Axis.FIXED_TICK_POSITIONS
-        self.label_mode = Axis.LABELS_NUMERICAL
-        self.update_dimensions(num_ticks=num_ticks)
-
-    def set_ticks(self, ticks, labels):
-        """
-        Set custom tick locations with a 1d array and optional string labels.
-
-        Ticks will change their location to retain their value.
-        """
-        self.mode = self.FIXED_TICK_VALUES
-        self.label_mode = Axis.LABELS_TEXT
-        self.label_mode = Axis.LABELS_NUMERICAL
-
-        # Also implement label mode here
-        raise NotImplementedError
-
-    def set_labels(self, labels):
-        pass
-
-
-    def draw(self):
-
-
-        self.pdraw.line(
-            self.pos_line, self.colors["axis"], on_axes=True)
-
-        tick_vector = self.tick_direction * self.length
-
-        for i, (pos, label) in enumerate(zip(self.pos_ticks, self.labels)):
-
-            self.pdraw.vector(
-                pos, tick_vector, self.colors["axis"],
-                on_axes=True)
-
-            font, color =  self.fonts["tick"]
-            offset = self.tick_direction * (2 + self.length)
-            self.pdraw.text(
-                label, font, color, pos, self.text_ha, self.text_va,
-                offset, on_axes=True)
-
-
+        self.colors = {
+            "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY5),
+            "canvas_line": kwargs.get("cols_canvas_line", Color.GREY3),
+            "axes_bg": kwargs.get("cols_axes_bg", Color.WHITE),
+            "axes_line": kwargs.get("cols_axes_line", Color.GREY3),
+            "axis": kwargs.get("cols_axis", Color.GREY4)}        
+        font_type = "msreferencesansserif"
+        self.fonts = {
+            "title": (pygame.font.SysFont(font_type, 12), Color.BLACK),
+            "legend": (pygame.font.SysFont(font_type, 10), Color.BLACK),
+            "tick": (pygame.font.SysFont(font_type, 8), Color.BLACK)}
+        
 
 class PlotMetrics:
 
     def __init__(
-            self, pos: tuple[int], dim: tuple[int], xdom: tuple[int],
-            ydom: tuple[int], axes_xpad: tuple[int]=(20,10), 
-            axes_ypad: tuple[int]=(20,10)):
+            self, 
+            pos: tuple[int], 
+            dim: tuple[int], 
+            xdom: tuple[int],
+            ydom: tuple[int], 
+            axes_xpad: tuple[int]=(30,10), 
+            axes_ypad: tuple[int]=(40,10)):
         
         assert xdom[0] < xdom[1], "Invalid x domain"
         assert ydom[0] < ydom[1], "Invalid y domain"
@@ -399,23 +175,265 @@ class PlotMetrics:
         return np.diff(self._ydom)[0]
 
 
-class PlotTheme:
+class Axes(Element):
 
-    def __init__(self, **kwargs):
+    def __init__(self, parent_canvas):
         """
-        Plot color and font properties.
+        Contains a rectangle within parent_canvas containing all plots.
         """
-        self.colors = {
-            "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY5),
-            "canvas_line": kwargs.get("cols_canvas_line", Color.GREY3),
-            "axes_bg": kwargs.get("cols_axes_bg", Color.WHITE),
-            "axes_line": kwargs.get("cols_axes_line", Color.GREY3),
-            "axis": kwargs.get("cols_axis", Color.GREY4)}        
-        font_type = "msreferencesansserif"
-        self.fonts = {
-            "title": (pygame.font.SysFont(font_type, 12), Color.BLACK),
-            "legend": (pygame.font.SysFont(font_type, 10), Color.BLACK),
-            "tick": (pygame.font.SysFont(font_type, 8), Color.BLACK)}
+        super().__init__(parent_canvas)
+        self.dim = np.zeros(2)
+        self.update_dimensions()
+
+    def update_dimensions(self, **args):
+        self.dim = self.metrics.dim - np.hstack([
+            self.metrics._axes_xpad.sum(),
+            self.metrics._axes_ypad.sum()]) 
+
+    def draw(self):
+        axes_top_left = (
+            self.metrics.xdom[0],
+            self.metrics.ydom[1])
+
+        self.pdraw.rect(
+            axes_top_left, self.dim, self.colors["axes_bg"],
+            self.colors["axes_line"], on_axes=True)
+
+
+class Axis(Element):
+
+    X = 0
+    Y = 1
+
+    FIXED_TICK_POSITIONS = 0
+    FIXED_TICK_VALUES = 1
+
+    LABELS_NUMERICAL = 0
+    LABELS_TEXT = 1
+
+
+    def __init__(self, parent_canvas, orientation: int, **kwargs):
+        """
+        Axis element containing ticks and labels.
+
+        Args:
+            parent_canvas : Canvas
+                Canvas to which the axis in linked.
+            orientation : int
+                Determines whether X or Y axis.
+        """
+        super().__init__(parent_canvas)
+        self.orientation = orientation          
+        self.tick_margin = kwargs.get("margin", 0.1)
+        self.tick_length = kwargs.get("length", 3) 
+
+        self.pos_line = np.zeros((2,2))
+        self.pos_ticks = np.zeros(2)
+        
+        self.labels = None
+
+        # Tick mode: either fixed locations or fixed values
+        self.tick_mode = None
+        self.label_mode = None
+
+        self.update_dimensions()
+
+    @property
+    def text_va(self) -> str:
+        return 'bottom' if self.orientation == Axis.X else 'center'
+    
+    @property
+    def text_ha(self) -> str:
+        return 'center' if self.orientation == Axis.X else 'right'
+
+    @property
+    def tick_direction(self) -> np.ndarray:
+        return np.array((0, 1)) if self.orientation == Axis.X else np.array((-1, 0))
+
+    @property
+    def dom(self) -> np.ndarray:
+        """
+        Return the domain of this axis.
+        """
+        return self.canvas.metrics.xdom if self.orientation == Axis.X else self.canvas.metrics.ydom
+    
+    @property
+    def dom_other(self) -> np.ndarray:
+        """
+        Return the domain of the other axis (x if y, y if x).
+        """
+        return self.canvas.metrics.ydom if self.orientation == Axis.X else self.canvas.metrics.xdom
+
+    @property
+    def span(self) -> float:
+        """
+        Return the span of this axis domain.
+        """
+        return np.diff(self.dom)
+
+    @property
+    def crossing(self) -> float:
+        """
+        Return the coordinate of the other axis at which the axis crosses.
+        """
+        # TODO: implement optional crossing at 0 if in domain
+        return self.dom_other[0]
+
+    def update_dimensions(self, **kwargs):
+        """
+        Recalculate the ticks locations and axis line.
+        """
+        # Compute this axis line coordinates as [[x1, y1], [x2, y2]]
+        # First compute the diagonal line
+        pos_line = np.transpose(np.vstack([
+            self.canvas.metrics.xdom,
+            self.canvas.metrics.ydom]))
+        
+        
+    
+        # Then set fix the position to either vertical or horizontal    
+        pos_line[:,1-self.orientation] = self.crossing
+        self.pos_line = pos_line
+
+        # Update ticks
+        if self.tick_mode == Axis.FIXED_TICK_POSITIONS:
+
+            # Compute crossing ticks (diagnal for now)
+            n = kwargs.get("num_ticks", self.pos_ticks.shape[0])
+            offset = self.tick_margin * self.span
+
+            start = pos_line[0]
+            start[self.orientation] += offset
+
+            end = pos_line[1]
+            end[self.orientation] -= offset
+
+            pos_ticks = np.linspace(start, end, n)
+
+            self.pos_ticks = pos_ticks
+
+        elif self.tick_mode == Axis.FIXED_TICK_VALUES:
+            raise NotImplementedError
+
+        # Update labels
+        if self.label_mode == Axis.LABELS_NUMERICAL:
+            self.update_numerical_labels()
+
+        elif self.label_mode == Axis.LABELS_TEXT:
+            raise NotImplementedError
+
+    def update_fixed_position_ticks(self):
+        """
+        TODO: move fixed tick part from function above here.
+        """
+        pass
+
+    def update_numerical_labels(self):
+        """
+        Get string numberical labels with appropiate formatting.
+        """
+        numbers = self.pos_ticks[:,self.orientation]
+        mag = floor(log10(max(abs(numbers))))
+
+        if -5 < mag < 5:
+            round_to = max(0, 1 - mag)
+            self.labels = [f"%.{round_to}f" % x for x in numbers]
+        else:
+            self.labels = [np.format_float_scientific(x, 1) for x in numbers]
+
+    def set_num_ticks(self, num_ticks):
+        """
+        Set a fixed number of evenly spaced tick locations
+
+        Ticks will change their value to keep their relative location.
+        """
+        self.tick_mode = Axis.FIXED_TICK_POSITIONS
+        self.label_mode = Axis.LABELS_NUMERICAL
+        self.update_dimensions(num_ticks=num_ticks)
+
+    def set_ticks(self, ticks, labels):
+        """
+        Set custom tick locations with a 1d array and optional string labels.
+
+        Ticks will change their location to retain their value.
+        """
+        self.mode = self.FIXED_TICK_VALUES
+        self.label_mode = Axis.LABELS_TEXT
+        self.label_mode = Axis.LABELS_NUMERICAL
+
+        # Also implement label mode here
+        raise NotImplementedError
+
+    def set_labels(self, labels):
+        pass
+
+
+    def draw(self):
+
+        if self.orientation == self.X:
+            pass
+            self.pdraw.line(
+                self.pos_line, Color.BLUE3, on_axes=True)
+        else:
+            pass
+            # self.pdraw.line(
+            #     self.pos_line, Color.RED3, on_axes=True)
+        
+
+
+        # Draw axis line
+        # self.pdraw.line(
+        #     self.pos_line, self.colors["axis"], on_axes=True)
+
+    
+        # Draw ticks
+        tick_vector = self.tick_direction * self.tick_length
+        for i, (pos, label) in enumerate(zip(self.pos_ticks, self.labels)):
+
+            self.pdraw.vector(
+                pos, tick_vector, self.colors["axis"],
+                on_axes=True)
+
+            font, color =  self.fonts["tick"]
+            offset = self.tick_direction * (2 + self.tick_length)
+            self.pdraw.text(
+                label, font, color, pos, self.text_ha, self.text_va,
+                offset, on_axes=True)
+
+
+class Title(Element):
+
+    def __init__(self, parent_canvas, title):
+        """
+        Contains the plot title and title dimensions, centered above axes.
+        """
+        super().__init__(parent_canvas)
+        self.title = title
+
+        self.update_dimensions()
+        
+    def update_dimensions(self, **args):
+        """
+        Update the title position to a point centered above the axes.
+        """
+        self.pos = np.array([
+            self.metrics.axes_xpad[0] + self.canvas.axes.dim[0] / 2, 
+            self.metrics.axes_ypad[0] / 2])
+
+    def draw(self):
+        font, color =  self.fonts["title"]
+        self.pdraw.text(
+            self.title, font, color, self.pos, ha="center",
+            va="center", on_axes=False)
+
+
+class Legend(Element):
+
+    def __init__(self, parent_canvas):
+        """
+        Legend element for plots.
+        """
+        super().__init__(parent_canvas)
 
 
 class Canvas:
@@ -438,44 +456,28 @@ class Canvas:
         self.metrics = PlotMetrics(pos, dim, xdom, ydom)
         self.theme = PlotTheme(**kwargs)
 
-
-        # Plot draw and element instances to metrics
-        
-
-
-
-        # Plot draw and element instances to metrics
-        
+        # Plot draw and element instances to metrics        
         self.axes = Axes(self)
-        
         self.title = Title(self, kwargs.get("title", ""))
-        self.axisx = Axis(self, Axis.X, margin=0.1)
-        self.axisy = Axis(self, Axis.Y, margin=0.1)
+        self.axisx = Axis(self, Axis.X)
+        self.axisy = Axis(self, Axis.Y)
 
         for element in [self.axes, self.title, self.axisx, self.axisy]:
             self.metrics.add_element(self.axes)
 
-
         self.pdraw = PlotDraw(self)
 
     def draw(self, surface):
-
         self.pdraw.clear()
 
         # Draw the canvas itself
         self.pdraw.rect(
             (0,0), self.metrics.dim, self.theme.colors["canvas_bg"],
             self.theme.colors["canvas_line"], on_axes=False)
-
-
+        
         self.axes.draw()
         self.title.draw()
         self.axisx.draw()
         self.axisy.draw()
 
         self.pdraw.draw(surface)
-
-
-
-if __name__ == '__main__':
-    can = Canvas()

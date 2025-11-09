@@ -60,6 +60,7 @@ def main():
         dim=(350,250),
         xdom=(-5,10),
         ydom=(-10,30),
+        
         title="Plot for testing purposes")
 
     plot.axisx.set_num_ticks(10)

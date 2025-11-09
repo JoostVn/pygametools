@@ -75,9 +75,11 @@ class PlotDraw:
 
         # TODO: what is this method doing here? shouldnt it be in Canvas?
 
-        self.surface_canvas.blit(self.surface_axes, self.canvas.pad[:2])
+        self.surface_canvas.blit(
+            self.surface_axes,
+            (self.canvas.metrics.axes_xpad[0], self.canvas.metrics.axes_ypad[0]))
 
-        surface.blit(self.surface_canvas, self.canvas.pos)
+        surface.blit(self.surface_canvas, self.metrics.pos)
 
 
     def get_surface_pos(self, pos, on_axes):
