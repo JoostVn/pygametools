@@ -11,13 +11,21 @@ class PlotDraw:
 
 
     def __init__(self, parent_canvas, **kwargs):
-        self.canvas = parent_canvas
+        self.parent_canvas = parent_canvas
 
 
-        self.surface_canvas = pygame.Surface(self.canvas.dim)
+        self.surface_canvas = pygame.Surface(self.canvas.metrics.dim)
         self.surface_axes = pygame.Surface(self.canvas.axes.dim)
 
+        # TODO surface for legend
 
+    @property
+    def canvas(self):
+        return self.parent_canvas
+
+    @property
+    def metrics(self):
+        return self.canvas.metrics
 
     def update_dimensions(self, **args):
         """
@@ -46,8 +54,8 @@ class PlotDraw:
         """
         Reset the draw surfaces to allow the plots to be re-drawn.
         """
-        self.surface_canvas.fill(self.canvas.colors["canvas_bg"])
-        self.surface_axes.fill(self.canvas.colors["axes_bg"])
+        self.surface_canvas.fill(self.canvas.theme.colors["canvas_bg"])
+        self.surface_axes.fill(self.canvas.theme.colors["axes_bg"])
 
 
     def draw(self, surface):
@@ -65,13 +73,11 @@ class PlotDraw:
 
         """
 
-
+        # TODO: what is this method doing here? shouldnt it be in Canvas?
 
         self.surface_canvas.blit(self.surface_axes, self.canvas.pad[:2])
 
         surface.blit(self.surface_canvas, self.canvas.pos)
-
-
 
 
     def get_surface_pos(self, pos, on_axes):
@@ -87,15 +93,19 @@ class PlotDraw:
         reverse the y-coordinates. If pos is a list of points, it should have
         shape (nr_points, 2).
         """
+        # TODO: what dimensions for pos do we allow? single point, list of points, numpy array?
+        # TODO: don't return both surface and pos, but have separate methods
 
         if not on_axes:
             return self.surface_canvas, pos
 
-
         # Compute position of point as a ratio of domains
-        dom_span = np.diff(self.canvas.dom, axis=1)[:,0]
-        dom_min = self.canvas.dom[:,0]
-        relative_pos = (pos - dom_min) / dom_span
+        relative_pos = np.array([
+            (pos[0] - self.metrics.xdom[0]) / self.metrics.xdom_span,
+            (pos[1] - self.metrics.ydom[0]) / self.metrics.ydom_span
+        ])
+
+    
 
         # Reverse y coordinate
         if relative_pos.ndim == 2:
@@ -160,7 +170,7 @@ class PlotDraw:
         """
 
 
-        Parameters
+        Params
         ----------
         text : TYPE
             DESCRIPTION.
