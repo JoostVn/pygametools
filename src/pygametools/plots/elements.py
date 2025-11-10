@@ -81,12 +81,12 @@ class PlotMetrics:
 
     def __init__(
             self, 
-            pos: tuple[int], 
-            dim: tuple[int], 
-            xdom: tuple[int],
-            ydom: tuple[int], 
-            axes_xpad: tuple[int]=(30,10), 
-            axes_ypad: tuple[int]=(40,10)):
+            pos: tuple[int, int], 
+            dim: tuple[int, int], 
+            xdom: tuple[float, float],
+            ydom: tuple[float, float], 
+            axes_xpad: tuple[int, int]=(30,10), 
+            axes_ypad: tuple[int, int]=(40,10)):
         
         assert xdom[0] < xdom[1], "Invalid x domain"
         assert ydom[0] < ydom[1], "Invalid y domain"
@@ -273,7 +273,7 @@ class Axis(Element):
         """
         Return the span of this axis domain.
         """
-        return np.diff(self.dom)
+        return np.diff(self.dom)[0]
 
     @property
     def crossing(self) -> float:
@@ -443,8 +443,12 @@ class Legend(Element):
 class Canvas:
 
     def __init__(
-            self, pos: tuple[int], dim: tuple[int], xdom: tuple[float], 
-            ydom: tuple[float], **kwargs):
+            self,
+            pos: tuple[int, int],
+            dim: tuple[int, int],
+            xdom: tuple[float, float], 
+            ydom: tuple[float, float],
+            **kwargs):
         """
         Container for all plot elements and single source of truth for dimensions and domains.
         
