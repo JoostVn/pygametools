@@ -5,46 +5,11 @@ import numpy as np
 from pygametools.color import Color
 
 
-
-
-# class PlotDraw:
-
-
-#     def __init__(self, parent_canvas, **kwargs):
-#         self.parent_canvas = parent_canvas
-#         self.surface_canvas = pygame.Surface(self.canvas.metrics.dim)
-      
-#         # TODO surface for legend
-
-#     @property
-#     def canvas(self):
-#         return self.parent_canvas
-
-#     @property
-#     def metrics(self):
-#         return self.canvas.metrics
-
-#     def update_dimensions(self, **args):
-#         if "dim" in args:
-#             self.surface_canvas = pygame.Surface(self.canvas.dim)
-#             self.surface_axes = pygame.Surface(self.canvas.axes.dim)
-
-#         if "pad" in args:
-#             self.surface_axes = pygame.Surface(self.canvas.axes.dim)
-
-
-
-#########################################################################
-
 class PlotDraw:
-
 
     def __init__(self, parent_canvas, **kwargs):
         self.parent_canvas = parent_canvas
-
-
         self.surface_canvas = pygame.Surface(self.canvas.metrics.dim)
-        
         # self.surface_axes = pygame.Surface(self.canvas.axes.dim)
 
         # TODO surface for legend
@@ -58,19 +23,8 @@ class PlotDraw:
         return self.canvas.metrics
 
     def update_dimensions(self, **args):
-        """
-        Updates the two draw surfaces.
 
-        Parameters
-        ----------
-        **args : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
-        """
+        # TODO: call from plot_metrics!
 
         if "dim" in args:
             self.surface_canvas = pygame.Surface(self.canvas.dim)
@@ -80,7 +34,6 @@ class PlotDraw:
         if "pad" in args:
             pass
             # self.surface_axes = pygame.Surface(self.canvas.axes.dim)
-
 
     def clear(self):
         """
@@ -93,26 +46,12 @@ class PlotDraw:
     def draw(self, surface):
         """
         Draw the plot surface on another Pygame surface.
-
-        Parameters
-        ----------
-        surface : TYPE
-            DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
         """
-
-        # TODO: what is this method doing here? shouldnt it be in Canvas?
-
         # self.surface_canvas.blit(
         #     self.surface_axes,
         #     (self.canvas.metrics.axes_xpad[0], self.canvas.metrics.axes_ypad[0]))
 
         surface.blit(self.surface_canvas, self.metrics.pos)
-
 
     def get_surface_pos(self, pos, on_axes):
         """
@@ -152,9 +91,6 @@ class PlotDraw:
         pos_axes = self.canvas.axes.dim * relative_pos
 
         pos_axes = pos_axes.astype(int)
-
-
-
 
         return self.surface_axes, pos_axes
 
@@ -200,43 +136,16 @@ class PlotDraw:
         if linecol is not None:
             pygame.draw.rect(draw_surface, linecol, rect, width=1)
 
-
-
-
-
-
     def text(
             self, text, font, col, pos, ha, va, offset=(0,0), on_axes=True):
         """
-
-
-        Params
-        ----------
-        text : TYPE
-            DESCRIPTION.
-        font : TYPE
-            DESCRIPTION.
-        col : TYPE
-            DESCRIPTION.
-        pos : TYPE
-            DESCRIPTION.
-        ha : TYPE
-            DESCRIPTION.
-        va : TYPE
-            DESCRIPTION.
         offset : TYPE, optional
             Offset in Pygame coordinates. Useful when drawing text with graph
             coordinates that needs to be slightly but contantly ofsset to
             prevent overlap with data or ticks. The default is (0,0).
         graph_coords : TYPE, optional
             DESCRIPTION. The default is False.
-
-        Returns
-        -------
-        None.
-
         """
-
         draw_surface, draw_pos = self.get_surface_pos(pos, on_axes)
 
         text_block = font.render(text, True, col)
