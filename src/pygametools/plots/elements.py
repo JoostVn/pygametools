@@ -4,9 +4,7 @@ Elements:
     - PlotMetrics: contains top-level dimensions, positions, domains. Also 
       notifies elements of changes. 
 
-
-
-      # TODO: get running without error
+      # TODO: render axes without surface (to prevent out of bound ticks)
       # TODO: make sure all elements are registered to metrics and update on changes
       # TODO: test different cases
       # TODO: make sure title, labels, ticks are drawn correctly after updates
