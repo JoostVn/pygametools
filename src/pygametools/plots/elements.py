@@ -4,6 +4,7 @@ Elements:
     - PlotMetrics: contains top-level dimensions, positions, domains. Also 
       notifies elements of changes. Elements only re-calculate their dimensions when they change.
 
+      # TODO: fix the circle reference between metrics and elements. Maybe remove update responsibiliy from metrics?
       # TODO: in draw function, make sure on_axes converts coordinates instead of drawing on axes surface
       # TODO: fix line of axes not showing up
       # TODO: Change update_dimensions functions to update_metrics with a Literal metric
