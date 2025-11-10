@@ -44,7 +44,8 @@ class PlotDraw:
 
 
         self.surface_canvas = pygame.Surface(self.canvas.metrics.dim)
-        self.surface_axes = pygame.Surface(self.canvas.axes.dim)
+        
+        # self.surface_axes = pygame.Surface(self.canvas.axes.dim)
 
         # TODO surface for legend
 
@@ -73,10 +74,12 @@ class PlotDraw:
 
         if "dim" in args:
             self.surface_canvas = pygame.Surface(self.canvas.dim)
-            self.surface_axes = pygame.Surface(self.canvas.axes.dim)
+            
+            # self.surface_axes = pygame.Surface(self.canvas.axes.dim)
 
         if "pad" in args:
-            self.surface_axes = pygame.Surface(self.canvas.axes.dim)
+            pass
+            # self.surface_axes = pygame.Surface(self.canvas.axes.dim)
 
 
     def clear(self):
@@ -84,7 +87,7 @@ class PlotDraw:
         Reset the draw surfaces to allow the plots to be re-drawn.
         """
         self.surface_canvas.fill(self.canvas.theme.colors["canvas_bg"])
-        self.surface_axes.fill(self.canvas.theme.colors["axes_bg"])
+        # self.surface_axes.fill(self.canvas.theme.colors["axes_bg"])
 
 
     def draw(self, surface):
@@ -104,9 +107,9 @@ class PlotDraw:
 
         # TODO: what is this method doing here? shouldnt it be in Canvas?
 
-        self.surface_canvas.blit(
-            self.surface_axes,
-            (self.canvas.metrics.axes_xpad[0], self.canvas.metrics.axes_ypad[0]))
+        # self.surface_canvas.blit(
+        #     self.surface_axes,
+        #     (self.canvas.metrics.axes_xpad[0], self.canvas.metrics.axes_ypad[0]))
 
         surface.blit(self.surface_canvas, self.metrics.pos)
 
