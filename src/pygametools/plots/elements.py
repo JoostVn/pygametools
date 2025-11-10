@@ -9,6 +9,7 @@ Elements:
       # TODO: test different cases
       # TODO: make sure title, labels, ticks are drawn correctly after updates
       # TODO: Implement legend element
+      # TODO: split update elements into dom/dim/pos/pad such that not every change needs all updates
  
 """
 import numpy as np
@@ -119,6 +120,7 @@ class PlotMetrics:
     @pos.setter
     def pos(self, value: np.ndarray):
         self._pos = value
+        self.update_elements()
     
     @property
     def dim(self) -> np.ndarray:
@@ -127,6 +129,7 @@ class PlotMetrics:
     @dim.setter
     def dim(self, value: np.ndarray):
         self._dim = value
+        self.update_elements()
     
     @property
     def xdom(self) -> np.ndarray:
@@ -136,6 +139,7 @@ class PlotMetrics:
     def xdom(self, value: np.ndarray):
         assert value[0] < value[1], "Invalid x domain"
         self._xdom = value
+        self.update_elements()
 
     @property
     def ydom(self) -> np.ndarray:
@@ -145,6 +149,7 @@ class PlotMetrics:
     def ydom(self, value: np.ndarray):
         assert value[0] < value[1], "Invalid y domain"
         self._ydom = value
+        self.update_elements()
 
     @property
     def axes_xpad(self) -> np.ndarray:
@@ -153,6 +158,7 @@ class PlotMetrics:
     @axes_xpad.setter
     def axes_xpad(self, value: np.ndarray):
         self._axes_xpad = value
+        self.update_elements()
 
     @property
     def axes_ypad(self) -> np.ndarray:
@@ -161,9 +167,9 @@ class PlotMetrics:
     @axes_ypad.setter
     def axes_ypad(self, value: np.ndarray):
         self._axes_ypad = value
+        self.update_elements()
 
     # Derived properties
-
     @property
     def xdom_span(self) -> float:
         return np.diff(self._xdom)[0]
