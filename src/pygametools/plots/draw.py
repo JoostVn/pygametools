@@ -4,8 +4,37 @@ import pygame.gfxdraw
 import numpy as np
 from pygametools.color import Color
 
-# from debug.time import ConsecutiveLineTimer, FuncStats
 
+
+
+# class PlotDraw:
+
+
+#     def __init__(self, parent_canvas, **kwargs):
+#         self.parent_canvas = parent_canvas
+#         self.surface_canvas = pygame.Surface(self.canvas.metrics.dim)
+      
+#         # TODO surface for legend
+
+#     @property
+#     def canvas(self):
+#         return self.parent_canvas
+
+#     @property
+#     def metrics(self):
+#         return self.canvas.metrics
+
+#     def update_dimensions(self, **args):
+#         if "dim" in args:
+#             self.surface_canvas = pygame.Surface(self.canvas.dim)
+#             self.surface_axes = pygame.Surface(self.canvas.axes.dim)
+
+#         if "pad" in args:
+#             self.surface_axes = pygame.Surface(self.canvas.axes.dim)
+
+
+
+#########################################################################
 
 class PlotDraw:
 
@@ -152,19 +181,25 @@ class PlotDraw:
 
 
     def rect(
-            self, pos, dim, facecol, linecol=None, on_axes=True):
-
+            self,
+            pos: np.ndarray,
+            dim: np.ndarray,
+            facecol: tuple | None=None,
+            linecol: tuple | None=None,
+            on_axes: bool=True):
 
         draw_surface, draw_pos = self.get_surface_pos(pos, on_axes)
-
-
-
-
         rect = pygame.Rect(*draw_pos, *dim)
-        pygame.draw.rect(draw_surface, facecol, rect)
 
-        if linecol:
+        if facecol is not None:
+            pygame.draw.rect(draw_surface, facecol, rect)
+
+        if linecol is not None:
             pygame.draw.rect(draw_surface, linecol, rect, width=1)
+
+
+
+
 
 
     def text(
