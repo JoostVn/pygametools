@@ -4,10 +4,8 @@ from pygametools.gui.base import Application
 from pygametools.gui.elements import Button, Slider, Label
 import numpy as np
 
-# TODO: scale arr
-# TODO: don't re-make surface each tick
-# TODO: understand the draw function: can we adjust where the surface is drawn? (now it's always window filling)
 
+# TODO: understand the draw function: can we adjust where the surface is drawn? (now it's always window filling)
 
 class Simulation:
 
@@ -20,10 +18,16 @@ class Simulation:
     def update(self):
         self.arr = np.random.uniform(0, 1, size=(*self.env_dim, 3))
 
-    def draw(self, screen):
+    def draw(self, screen, zoom, pan_offset):
         arr_rgb = self.arr * self.brightness
-        surface = pygame.surfarray.make_surface(arr_rgb)
-        pygame.transform.scale(surface, self.window_size, screen)
+        arr_surface = pygame.surfarray.make_surface(arr_rgb)
+        
+        zoomed_window_size = tuple(np.multiply(zoom, self.window_size).astype(int))
+        arr_surface = pygame.transform.scale(arr_surface, zoomed_window_size)
+
+        rect = arr_surface.get_rect()
+        rect = rect.move(pan_offset)
+        screen.blit(arr_surface, rect)
 
 
 class App(Application):
@@ -36,7 +40,7 @@ class App(Application):
         self.simulation.update()
 
     def draw(self):
-        self.simulation.draw(self.screen)
+        self.simulation.draw(self.screen, self.zoom, self.pan_offset)
 
 
 def gui_test():
