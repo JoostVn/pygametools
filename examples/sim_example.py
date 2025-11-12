@@ -53,7 +53,7 @@ class Simulation:
         self.agent_pos = np.full((
             num_agent_groups, num_agents_per_group, 2), np.divide(self.env_dim, 2))
         self.agent_angles = np.random.uniform(
-            0, 2*pi, (num_agent_groups, num_agents_per_group))
+            0*pi, 2*pi, (num_agent_groups, num_agents_per_group))
         self.agent_trails = np.zeros(
             (num_agent_groups, *self.env_dim))
         
@@ -65,8 +65,7 @@ class Simulation:
 
     def update(self):
         
-        # Update agent angle
-        # TODO
+        # Update agent angles with some randomness
         self.agent_angles = self.agent_angles + np.random.uniform(
             low=-self.randomness,
             high=self.randomness,
@@ -76,13 +75,24 @@ class Simulation:
         self.agent_pos[:,:,0] += self.agent_speed * np.cos(self.agent_angles)
         self.agent_pos[:,:,1] += self.agent_speed * np.sin(self.agent_angles)
 
-        # Bounce out of bound agents
-        agent_x = self.agent_pos[:,:,0].flatten()
-        agent_y = self.agent_pos[:,:,1].flatten()
+        # Bounce agents that are out of bounds back (change angle and pos)
+        lb_x = self.agent_pos[:,:,0] < 0
+        ub_x = self.agent_pos[:,:,0] > self.env_dim[0] - 1
+        mask_x = ub_x | lb_x
+        self.agent_angles[mask_x] = pi - self.agent_angles[mask_x]
+        self.agent_pos[lb_x, 0] = - self.agent_pos[lb_x, 0]
+        self.agent_pos[ub_x, 0] = 2 * self.env_dim[0] - 2 - self.agent_pos[ub_x, 0]
 
-        idx_x_lower = self.agent_pos[:,:,0] < 0
-        # TODO
-      
+        # Same for y axis
+        lb_y = self.agent_pos[:,:,1] < 0
+        ub_y = self.agent_pos[:,:,1] > self.env_dim[1] - 1
+        mask_y = ub_y | lb_y
+        self.agent_angles[mask_y] = - self.agent_angles[mask_y]
+        self.agent_pos[lb_y, 1] = - self.agent_pos[lb_y, 1]
+        self.agent_pos[ub_y, 1] = 2 * self.env_dim[1] - 2 - self.agent_pos[ub_y, 1]
+
+        # Set angle back to [0, 2pi]
+        self.agent_angles = self.agent_angles % (2 * pi)
 
         # Add new positions to agent trails
         for i in self.group_idx:
@@ -110,7 +120,7 @@ class Simulation:
         # Place agents on color array
         agent_x = tuple(self.agent_pos[:,:,0].flatten().astype(int))
         agent_y = tuple(self.agent_pos[:,:,1].flatten().astype(int))
-        arr_draw_rgb[agent_x, agent_y, :] = 255
+        arr_draw_rgb[agent_x, agent_y, :] = 210
 
         # Adjust brightness and draw zoomed/panned color array
         arr_draw_rgb = arr_draw_rgb * self.brightness
@@ -136,12 +146,12 @@ class App(Application):
 
 
 def gui_test():
-    window_size = (400,400)
+    window_size = (600,600)
     simulation = Simulation(
-        env_dim=(200, 200),
+        env_dim=(300, 300),
         window_size=window_size,
-        num_agent_groups=5,
-        num_agents_per_group=20)
+        num_agent_groups=4,
+        num_agents_per_group=50)
     app = App(window_size, simulation)
 
     app.set_gui([
@@ -149,7 +159,7 @@ def gui_test():
             obj=simulation,
             attribute='brightness',
             domain=(0, 1),
-            default=0.3,
+            default=1,
             pos=(10, 10),
             width=60,
             height=20),
@@ -157,7 +167,7 @@ def gui_test():
             obj=simulation,
             attribute='blur_factor',
             domain=(0, 0.5),
-            default=0.03,
+            default=0.25,
             pos=(10, 20),
             width=60,
             height=20),
@@ -165,15 +175,15 @@ def gui_test():
             obj=simulation,
             attribute='decay',
             domain=(0, 0.2),
-            default=0.002,
+            default=0.01,
             pos=(10, 30),
             width=60,
             height=20),
         Slider(
             obj=simulation,
             attribute='agent_speed',
-            domain=(-2, 2),
-            default=0.6,
+            domain=(-5, 5),
+            default=2,
             pos=(10, 40),
             width=60,
             height=20),
@@ -181,7 +191,7 @@ def gui_test():
             obj=simulation,
             attribute='randomness',
             domain=(0, 1),
-            default=0.0,
+            default=0.1,
             pos=(10, 50),
             width=60,
             height=20),
