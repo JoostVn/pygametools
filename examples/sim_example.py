@@ -7,26 +7,21 @@ import numpy as np
 # TODO: scale arr
 # TODO: don't re-make surface each tick
 # TODO: understand the draw function: can we adjust where the surface is drawn? (now it's always window filling)
-# TODO: RGB array
 
 
 class Simulation:
 
-    def __init__(self, env_dim, window_size):
-        
+    def __init__(self, env_dim: tuple[int, int], window_size: tuple[int, int]):
         self.env_dim = env_dim
         self.window_size = window_size
-        self.arr = np.random.uniform(0, 1, size=env_dim)
+        self.arr = np.zeros((*self.env_dim, 3))
         self.brightness = 0.1
 
     def update(self):
-        self.arr = np.random.uniform(0, 1, size=self.env_dim)
+        self.arr = np.random.uniform(0, 1, size=(*self.env_dim, 3))
 
     def draw(self, screen):
-        # Code for rgb
-        # arr_rgb = np.stack([self.arr] * 3, axis=2) * self.brightness
-
-        arr_rgb = np.stack([self.arr] * 3, axis=2) * self.brightness
+        arr_rgb = self.arr * self.brightness
         surface = pygame.surfarray.make_surface(arr_rgb)
         pygame.transform.scale(surface, self.window_size, screen)
 
@@ -45,8 +40,8 @@ class App(Application):
 
 
 def gui_test():
-    window_size = (200,150)
-    simulation = Simulation(env_dim=(100, 75), window_size=window_size)
+    window_size = (100,100)
+    simulation = Simulation(env_dim=(50, 50), window_size=window_size)
     app = App(window_size, simulation)
 
     app.set_gui([
