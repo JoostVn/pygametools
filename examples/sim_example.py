@@ -4,75 +4,60 @@ from pygametools.gui.base import Application
 from pygametools.gui.elements import Button, Slider, Label
 import numpy as np
 
-class Environment:
-
-    def __init__(self, dim):
-        self.dim = dim
-        self.arr = np.random.uniform(0, 1, size=dim)
-    
+# TODO: scale arr
+# TODO: don't re-make surface each tick
+# TODO: understand the draw function: can we adjust where the surface is drawn? (now it's always window filling)
+# TODO: RGB array
 
 
 class Simulation:
 
-    def __init__(self, environment: Environment):
-        self.environment = environment
+    def __init__(self, env_dim, window_size):
+        
+        self.env_dim = env_dim
+        self.window_size = window_size
+        self.arr = np.random.uniform(0, 1, size=env_dim)
+        self.brightness = 0.1
 
     def update(self):
-        
-        self.environment.arr = np.random.uniform(0, 1, size=self.environment.dim)
+        self.arr = np.random.uniform(0, 1, size=self.env_dim)
 
-    def draw(self, surface):
-        pygame.surfarray.blit_array(surface, self.environment.arr) 
+    def draw(self, screen):
+        # Code for rgb
+        # arr_rgb = np.stack([self.arr] * 3, axis=2) * self.brightness
+
+        arr_rgb = np.stack([self.arr] * 3, axis=2) * self.brightness
+        surface = pygame.surfarray.make_surface(arr_rgb)
+        pygame.transform.scale(surface, self.window_size, screen)
 
 
 class App(Application):
 
     def __init__(self, window_size, simulation):
         super().__init__(window_size, theme_name="default_dark")
-
         self.simulation = simulation
 
-        # Attributes for test object
-        self.square_x = 200
-        self.square_y = 50
-        self.square_size = 50
-
     def update(self):
-        pass
-        # print(self.pan_offset)
+        self.simulation.update()
 
     def draw(self):
-
-
-        draw_x = self.square_x + self.pan_offset[0]
-        draw_y = self.square_y + self.pan_offset[1]
-
-        pygame.draw.rect(
-            self.screen,
-            Color.GREY2,
-            (draw_x, draw_y, self.square_size, self.square_size))
-        
         self.simulation.draw(self.screen)
 
 
-
 def gui_test():
-
-    environment = Environment(dim=(200, 300))
-    simulation = Simulation(environment)
-
-    app = App((400,400), simulation)
+    window_size = (200,150)
+    simulation = Simulation(env_dim=(100, 75), window_size=window_size)
+    app = App(window_size, simulation)
 
     app.set_gui([
         Slider(
-            obj=app,
-            attribute='square_size',
-            domain=(10, 100),
-            default=10,
+            obj=simulation,
+            attribute='brightness',
+            domain=(0, 255),
+            default=50,
             pos=(10, 10),
             width=60,
-            height=20
-        )
+            height=20)
     ])
 
     app.run()
