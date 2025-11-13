@@ -6,14 +6,25 @@ import numpy as np
 from numba import jit, float64, int32, boolean, prange
 from math import pi
 
-# TODO: change agent name to bot
-# TODO: agent membership with membership arr 
+# DONE / THIS COMMIT
+# TODO: Change agent to bot (name)
+# TODO: formatting sliders
+
+# PRIORITIZED
+# TODO: bot membership with membership arr 
 # TODO: make sure pos is always an integer
-# TODO: agent accent slider and accent in group color
+# TODO: bot accent slider and accent in group color
+
 # TODO: jit get_neigbours function (used in blur and trail following)
+# TODO: add trail detection and following
+
+# UNPRIORITIZED
+# Refactor: move bot vars to BotSwarm class, all pos/angle etc. methods to functions
 # TODO: why are the trails so dull? fix.
 # TODO: debug array: override all drawing to just display one array (for example, debug trails)
-
+# TODO: Move bounce to outside function
+# TODO: Add more options for edge handling (nudge + teleport)
+# TODO: test performance for parrallel / non parrallel functions
 
 
 @jit(float64[:,:](float64[:,:], float64), nopython=True, parallel=True)
@@ -35,93 +46,93 @@ class Simulation:
             self,
             env_dim: tuple[int, int],
             window_size: tuple[int, int],
-            num_agent_groups: int,
-            num_agents_per_group: int):
+            num_bot_groups: int,
+            num_bots_per_group: int):
         self.env_dim = env_dim
         self.window_size = window_size
 
         # Settings
         self.brightness = 0.1
-        self.agent_accent = 0.5
+        self.bot_accent = 0.5
         self.blur_factor = 0
         self.decay = 0
-        self.agent_speed = 0.2
+        self.bot_speed = 0.2
         self.randomness = 0.1
 
-        # Agents
-        self.num_agent_groups = num_agent_groups
-        self.num_agents_per_group = num_agents_per_group
+        # Bot variables
+        self.num_bot_groups = num_bot_groups
+        self.num_bots_per_group = num_bots_per_group
 
-        self.agent_pos = np.full((
-            num_agent_groups, num_agents_per_group, 2), np.divide(self.env_dim, 2))
-        self.agent_angles = np.random.uniform(
-            0*pi, 2*pi, (num_agent_groups, num_agents_per_group))
-        self.agent_trails = np.zeros(
-            (num_agent_groups, *self.env_dim))
-        self.agent_col = np.vstack([Color.random_vibrant() for i in self.group_idx])
+        self.bot_pos = np.full((
+            num_bot_groups, num_bots_per_group, 2), np.divide(self.env_dim, 2))
+        self.bot_angles = np.random.uniform(
+            0*pi, 2*pi, (num_bot_groups, num_bots_per_group))
+        self.bot_trails = np.zeros(
+            (num_bot_groups, *self.env_dim))
+        self.bot_col = np.vstack([Color.random_vibrant() for i in self.group_idx])
 
     @property
     def group_idx(self):
-        return np.arange(self.num_agent_groups)
+        return np.arange(self.num_bot_groups)
 
     def update(self):
         
-        # Update agent angles with some randomness
-        self.agent_angles = self.agent_angles + np.random.uniform(
+        # Update bot angles with some randomness
+        self.bot_angles = self.bot_angles + np.random.uniform(
             low=-self.randomness,
             high=self.randomness,
-            size=(self.num_agent_groups, self.num_agents_per_group))
+            size=(self.num_bot_groups, self.num_bots_per_group))
 
-        # Update agent pos
-        self.agent_pos[:,:,0] += self.agent_speed * np.cos(self.agent_angles)
-        self.agent_pos[:,:,1] += self.agent_speed * np.sin(self.agent_angles)
+        # Update bot pos
+        self.bot_pos[:,:,0] += self.bot_speed * np.cos(self.bot_angles)
+        self.bot_pos[:,:,1] += self.bot_speed * np.sin(self.bot_angles)
 
-        # Bounce agents that are out of bounds back (change angle and pos)
-        lb_x = self.agent_pos[:,:,0] < 0
-        ub_x = self.agent_pos[:,:,0] > self.env_dim[0] - 1
+        # Bounce bots that are out of bounds back (change angle and pos)
+        lb_x = self.bot_pos[:,:,0] < 0
+        ub_x = self.bot_pos[:,:,0] > self.env_dim[0] - 1
         mask_x = ub_x | lb_x
-        self.agent_angles[mask_x] = pi - self.agent_angles[mask_x]
-        self.agent_pos[lb_x, 0] = - self.agent_pos[lb_x, 0]
-        self.agent_pos[ub_x, 0] = 2 * self.env_dim[0] - 2 - self.agent_pos[ub_x, 0]
+        self.bot_angles[mask_x] = pi - self.bot_angles[mask_x]
+        self.bot_pos[lb_x, 0] = - self.bot_pos[lb_x, 0]
+        self.bot_pos[ub_x, 0] = 2 * self.env_dim[0] - 2 - self.bot_pos[ub_x, 0]
 
         # Same for y axis
-        lb_y = self.agent_pos[:,:,1] < 0
-        ub_y = self.agent_pos[:,:,1] > self.env_dim[1] - 1
+        lb_y = self.bot_pos[:,:,1] < 0
+        ub_y = self.bot_pos[:,:,1] > self.env_dim[1] - 1
         mask_y = ub_y | lb_y
-        self.agent_angles[mask_y] = - self.agent_angles[mask_y]
-        self.agent_pos[lb_y, 1] = - self.agent_pos[lb_y, 1]
-        self.agent_pos[ub_y, 1] = 2 * self.env_dim[1] - 2 - self.agent_pos[ub_y, 1]
+        self.bot_angles[mask_y] = - self.bot_angles[mask_y]
+        self.bot_pos[lb_y, 1] = - self.bot_pos[lb_y, 1]
+        self.bot_pos[ub_y, 1] = 2 * self.env_dim[1] - 2 - self.bot_pos[ub_y, 1]
 
         # Set angle back to [0, 2pi]
-        self.agent_angles = self.agent_angles % (2 * pi)
+        self.bot_angles = self.bot_angles % (2 * pi)
 
-        # Add new positions to agent trails
+        # Add new positions to bot trails
         for i in self.group_idx:
-            agent_int_pos = tuple(self.agent_pos[i].astype(int).T)
-            self.agent_trails[i, *agent_int_pos] = 1
+            bot_int_pos = tuple(self.bot_pos[i].astype(int).T)
+            self.bot_trails[i, *bot_int_pos] = 1
 
-        # Blur and apply decay to agent trails
+        # Blur and apply decay to bot trails
         for i in self.group_idx:
-            self.agent_trails[i] = blur_array(self.agent_trails[i], self.blur_factor)
+            self.bot_trails[i] = blur_array(self.bot_trails[i], self.blur_factor)
 
-        self.agent_trails = self.agent_trails * (1 - self.decay)
+        self.bot_trails = self.bot_trails * (1 - self.decay)
 
     def draw(self, screen, zoom, pan_offset):
         
         # Initialize color array
         arr_draw_rgb = arr_draw_rgb = np.zeros((*self.env_dim, 3))
 
-        # apply agent color to trails and combine into color array
+        # apply bot color to trails and combine into color array
         for i in self.group_idx:
-            trail_col = self.agent_col[i] * self.agent_trails[i,:,:,np.newaxis]
+            trail_col = self.bot_col[i] * self.bot_trails[i,:,:,np.newaxis]
             arr_draw_rgb += trail_col
         
-        arr_draw_rgb = arr_draw_rgb / self.num_agent_groups
+        arr_draw_rgb = arr_draw_rgb / self.num_bot_groups
         
-        # Accent agents positions on color array
-        agent_x = tuple(self.agent_pos[:,:,0].flatten().astype(int))
-        agent_y = tuple(self.agent_pos[:,:,1].flatten().astype(int))
-        arr_draw_rgb[agent_x, agent_y, :] += self.agent_accent * (255 - arr_draw_rgb[agent_x, agent_y, :])
+        # Accent bots positions on color array
+        bot_x = tuple(self.bot_pos[:,:,0].flatten().astype(int))
+        bot_y = tuple(self.bot_pos[:,:,1].flatten().astype(int))
+        arr_draw_rgb[bot_x, bot_y, :] += self.bot_accent * (255 - arr_draw_rgb[bot_x, bot_y, :])
 
         # Adjust brightness and draw zoomed/panned color array
         arr_draw_rgb = arr_draw_rgb * self.brightness
@@ -146,64 +157,22 @@ class App(Application):
         self.simulation.draw(self.screen, self.zoom, self.pan_offset)
 
 
-def gui_test():
+def main():
     window_size = (200,200)
     simulation = Simulation(
         env_dim=(100, 100),
         window_size=window_size,
-        num_agent_groups=4,
-        num_agents_per_group=50)
+        num_bot_groups=4,
+        num_bots_per_group=50)
     app = App(window_size, simulation)
 
     app.set_gui([
-        Slider(
-            obj=simulation,
-            attribute='brightness',
-            domain=(0, 1),
-            default=0.1,
-            pos=(10, 10),
-            width=60,
-            height=20),
-        Slider(
-            obj=simulation,
-            attribute='agent_accent',
-            domain=(0, 1),
-            default=0.2,
-            pos=(10, 20),
-            width=60,
-            height=20),
-        Slider(
-            obj=simulation,
-            attribute='blur_factor',
-            domain=(0, 0.5),
-            default=0.25,
-            pos=(10, 30),
-            width=60,
-            height=20),
-        Slider(
-            obj=simulation,
-            attribute='decay',
-            domain=(0, 0.2),
-            default=0.01,
-            pos=(10, 40),
-            width=60,
-            height=20),
-        Slider(
-            obj=simulation,
-            attribute='agent_speed',
-            domain=(-5, 5),
-            default=2,
-            pos=(10, 50),
-            width=60,
-            height=20),
-        Slider(
-            obj=simulation,
-            attribute='randomness',
-            domain=(0, 1),
-            default=0.1,
-            pos=(10, 60),
-            width=60,
-            height=20),
+        Slider(simulation, 'brightness', domain=(0, 1), default=0.1, pos=(10, 10), width=60, height=20),
+        Slider(simulation, 'bot_accent', domain=(0, 1), default=0.2, pos=(10, 20), width=60, height=20),
+        Slider(simulation, 'blur_factor', domain=(0, 0.5), default=0.25, pos=(10, 30), width=60, height=20),
+        Slider(simulation, 'decay', domain=(0, 0.2), default=0.01, pos=(10, 40), width=60, height=20),
+        Slider(simulation, 'bot_speed', domain=(-5, 5), default=2, pos=(10, 50), width=60, height=20),
+        Slider(simulation, 'randomness', domain=(0, 1), default=0.1, pos=(10, 60), width=60, height=20),
     ])
 
     app.run()
@@ -211,5 +180,4 @@ def gui_test():
 
 
 if __name__ == '__main__':
-
-    gui_test()
+    main()
