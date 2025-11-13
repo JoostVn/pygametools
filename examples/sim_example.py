@@ -7,14 +7,12 @@ from numba import jit, float64, int32, boolean, prange
 from math import pi
 
 # DONE / THIS COMMIT
-# TODO: Change agent to bot (name)
-# TODO: formatting sliders
+
+# TO DO / THIS COMMIT
 
 # PRIORITIZED
-# TODO: bot membership with membership arr 
 # TODO: make sure pos is always an integer
 # TODO: bot accent slider and accent in group color
-
 # TODO: jit get_neigbours function (used in blur and trail following)
 # TODO: add trail detection and following
 
@@ -59,17 +57,19 @@ class Simulation:
         self.bot_speed = 0.2
         self.randomness = 0.1
 
-        # Bot variables
+        # Bot contants
         self.num_bot_groups = num_bot_groups
         self.num_bots_per_group = num_bots_per_group
+        self.num_bots = self.num_bot_groups * self.num_bots_per_group
 
-        self.bot_pos = np.full((
-            num_bot_groups, num_bots_per_group, 2), np.divide(self.env_dim, 2))
-        self.bot_angles = np.random.uniform(
-            0*pi, 2*pi, (num_bot_groups, num_bots_per_group))
-        self.bot_trails = np.zeros(
-            (num_bot_groups, *self.env_dim))
-        self.bot_col = np.vstack([Color.random_vibrant() for i in self.group_idx])
+        # Bot data
+        self.bot_pos = np.full((self.num_bots, 2), np.divide(self.env_dim, 2))
+        self.bot_angles = np.random.uniform(0, 2*pi, size=self.num_bots)
+        self.bot_group = np.repeat(np.arange(num_bot_groups), num_bots_per_group)
+
+        # Group data
+        self.group_trails = np.zeros((num_bot_groups, *self.env_dim))
+        self.group_col = np.vstack([Color.random_vibrant() for i in self.group_idx])
 
     @property
     def group_idx(self):
@@ -77,45 +77,48 @@ class Simulation:
 
     def update(self):
         
-        # Update bot angles with some randomness
-        self.bot_angles = self.bot_angles + np.random.uniform(
+        # Randomly adjust bot angles
+        self.bot_angles += np.random.uniform(
             low=-self.randomness,
             high=self.randomness,
-            size=(self.num_bot_groups, self.num_bots_per_group))
+            size=self.num_bots)
 
         # Update bot pos
-        self.bot_pos[:,:,0] += self.bot_speed * np.cos(self.bot_angles)
-        self.bot_pos[:,:,1] += self.bot_speed * np.sin(self.bot_angles)
-
+        self.bot_pos += self.bot_speed * np.column_stack([
+            np.cos(self.bot_angles),
+            np.sin(self.bot_angles)])
+        
         # Bounce bots that are out of bounds back (change angle and pos)
-        lb_x = self.bot_pos[:,:,0] < 0
-        ub_x = self.bot_pos[:,:,0] > self.env_dim[0] - 1
+        max_x = self.env_dim[0] - 1
+        lb_x = self.bot_pos[:,0] < 0
+        ub_x = self.bot_pos[:,0] > max_x
         mask_x = ub_x | lb_x
         self.bot_angles[mask_x] = pi - self.bot_angles[mask_x]
         self.bot_pos[lb_x, 0] = - self.bot_pos[lb_x, 0]
-        self.bot_pos[ub_x, 0] = 2 * self.env_dim[0] - 2 - self.bot_pos[ub_x, 0]
+        self.bot_pos[ub_x, 0] = 2 * max_x - self.bot_pos[ub_x, 0]
 
         # Same for y axis
-        lb_y = self.bot_pos[:,:,1] < 0
-        ub_y = self.bot_pos[:,:,1] > self.env_dim[1] - 1
+        max_y = self.env_dim[1] - 1
+        lb_y = self.bot_pos[:,1] < 0
+        ub_y = self.bot_pos[:,1] > max_y
         mask_y = ub_y | lb_y
         self.bot_angles[mask_y] = - self.bot_angles[mask_y]
         self.bot_pos[lb_y, 1] = - self.bot_pos[lb_y, 1]
-        self.bot_pos[ub_y, 1] = 2 * self.env_dim[1] - 2 - self.bot_pos[ub_y, 1]
+        self.bot_pos[ub_y, 1] = 2 * max_y - self.bot_pos[ub_y, 1]
 
         # Set angle back to [0, 2pi]
         self.bot_angles = self.bot_angles % (2 * pi)
 
-        # Add new positions to bot trails
+        # Update the trails of each group with the new positions of its bot members
         for i in self.group_idx:
-            bot_int_pos = tuple(self.bot_pos[i].astype(int).T)
-            self.bot_trails[i, *bot_int_pos] = 1
+            bot_int_pos = self.bot_pos[self.bot_group==i].astype(int).T
+            self.group_trails[i, *bot_int_pos] = 1
 
-        # Blur and apply decay to bot trails
+        # Blur and apply decay to the trails of each group
         for i in self.group_idx:
-            self.bot_trails[i] = blur_array(self.bot_trails[i], self.blur_factor)
+            self.group_trails[i] = blur_array(self.group_trails[i], self.blur_factor)
 
-        self.bot_trails = self.bot_trails * (1 - self.decay)
+        self.group_trails *= (1 - self.decay)
 
     def draw(self, screen, zoom, pan_offset):
         
@@ -124,14 +127,14 @@ class Simulation:
 
         # apply bot color to trails and combine into color array
         for i in self.group_idx:
-            trail_col = self.bot_col[i] * self.bot_trails[i,:,:,np.newaxis]
+            trail_col = self.group_col[i] * self.group_trails[i,:,:,np.newaxis]
             arr_draw_rgb += trail_col
         
         arr_draw_rgb = arr_draw_rgb / self.num_bot_groups
         
-        # Accent bots positions on color array
-        bot_x = tuple(self.bot_pos[:,:,0].flatten().astype(int))
-        bot_y = tuple(self.bot_pos[:,:,1].flatten().astype(int))
+        # Accent bots positions on color array by making them brighter
+        bot_x = tuple(self.bot_pos[:,0].flatten().astype(int))
+        bot_y = tuple(self.bot_pos[:,1].flatten().astype(int))
         arr_draw_rgb[bot_x, bot_y, :] += self.bot_accent * (255 - arr_draw_rgb[bot_x, bot_y, :])
 
         # Adjust brightness and draw zoomed/panned color array
