@@ -3,39 +3,94 @@ from pygametools.color.color import Color
 from pygametools.gui.base import Application
 from pygametools.gui.elements import Button, Slider, Label
 import numpy as np
-from numba import jit, float64, int32, boolean, prange
-from math import pi
+from numba import jit, float64, int32, int64, boolean, prange
+from math import pi, cos, sin
 
 # DONE / THIS COMMIT
 
 # TO DO / THIS COMMIT
-
-# PRIORITIZED
-# TODO: make sure pos is always an integer
-# TODO: bot accent slider and accent in group color
+# TODO: have sensor value just return the highest angle 
 # TODO: jit get_neigbours function (used in blur and trail following)
 # TODO: add trail detection and following
 
+# PRIORITIZED
+# TODO: maybe use taichi instead of numba for optimization?
+# TODO: make sure pos is always an integer
+# TODO: bot accent slider and accent in group color
+
+
 # UNPRIORITIZED
-# Refactor: move bot vars to BotSwarm class, all pos/angle etc. methods to functions
+# TODO: Refactor - move bot vars to BotSwarm class, all pos/angle etc. methods to functions
 # TODO: why are the trails so dull? fix.
 # TODO: debug array: override all drawing to just display one array (for example, debug trails)
 # TODO: Move bounce to outside function
 # TODO: Add more options for edge handling (nudge + teleport)
 # TODO: test performance for parrallel / non parrallel functions
+# TODO: fix muddy colors when multiple trails are combined
+# TODO: numba 32 oe 64 bit variables?
+# TODO: interpolate trails between two bot positions
+
+# IDEAS
+# TODO: editable/moving "group affinity" matrix of groups that either attracts (1) or opposes (-1) 
+# TODO: Flock bird algorithm
+# TODO: 3 pixel bots for clearer direction
+# TODO: Ant colony optimization
+
+@jit(float64[:,:](float64[:,:], int64, int64, float64), nopython=True)
+def get_subarray(arr, i, j, span):
+    """
+    Return a single subarray of an array, centered at index and with a size given
+    by the span parameter. Handles sub arrays that fall completely or partially
+    outside the parent array bounds.
+    """
+    return arr[
+        max(0, i-span) : min(arr.shape[0], i+span+1),
+        max(0, j-span) : min(arr.shape[1], j+span+1)]
 
 
 @jit(float64[:,:](float64[:,:], float64), nopython=True, parallel=True)
 def blur_array(arr, fact):
     """
-    Blur a 2d array by combining the value in each cell with the mean value of the
-    cells around it.
+    Box blur a complete 2d array by combining each cell value and the mean neighbour value.
     """
     for i in prange(arr.shape[0]):
         for j in prange(arr.shape[1]):
-            mean = arr[i-1:i+2,j-1:j+2].sum() / 9
-            arr[i,j] = max(0, (1-fact) * arr[i,j] + fact * mean)
+            mean = get_subarray(arr, i, j, 1).sum() / 9
+            arr[i,j] = fact * mean + (1-fact) * arr[i,j]
     return arr
+
+
+@jit(float64(float64[:,:], float64[:], float64, float64, float64, float64),
+     nopython=True)
+def read_sensor(trail, pos, angle, sensor_reach, sensor_size, sensor_angle):
+    """
+    Read a single sensor value.
+
+    Determine the (x,y) sensor midpoint based on an agent position, agent
+    angle sensor reach, sensor size and sensor angle. Then, sum all
+    arr elements around that point in a square with sides of size
+    2*sensor_size and return the result.
+    """
+    true_angle = angle + sensor_angle
+    i = int(pos[0] + sensor_reach * cos(true_angle))
+    j = int(pos[1] + sensor_reach * sin(true_angle))
+    return get_subarray(trail, i, j, sensor_size).sum()
+
+
+@jit(float64[:](float64[:,:], float64[:,:], float64[:], float64, float64, float64),
+     nopython=True)
+def read_all_sensors(trail, bot_pos, bot_angles, sensor_reach, sensor_size, sensor_angle):
+    """
+    Calculate a sensor value for each bot in bot_pos and bot_angles.
+    """
+    sensor_values = np.zeros(shape=bot_pos.shape[0], dtype=float64)
+
+    for b in prange(bot_pos.shape[0]):
+        sensor_values[b] = read_sensor(
+            trail, bot_pos[b], bot_angles[b], sensor_reach, sensor_size, sensor_angle)
+    
+    return sensor_values
+
 
 
 class Simulation:
@@ -49,13 +104,19 @@ class Simulation:
         self.env_dim = env_dim
         self.window_size = window_size
 
-        # Settings
+        # Settings (variable based on slider)
         self.brightness = 0.1
         self.bot_accent = 0.5
         self.blur_factor = 0
         self.decay = 0
         self.bot_speed = 0.2
         self.randomness = 0.1
+        self.angle_nudge = 0.2
+
+        # Settings (constant)
+        self.sensor_distance = 4
+        self.sensor_size = 1
+        self.sensor_angles = np.array([-0.2*pi, 0, 0.2*pi])
 
         # Bot contants
         self.num_bot_groups = num_bot_groups
@@ -63,7 +124,7 @@ class Simulation:
         self.num_bots = self.num_bot_groups * self.num_bots_per_group
 
         # Bot data
-        self.bot_pos = np.full((self.num_bots, 2), np.divide(self.env_dim, 2))
+        self.bot_pos = np.random.uniform((0,0), self.env_dim, (self.num_bots, 2))
         self.bot_angles = np.random.uniform(0, 2*pi, size=self.num_bots)
         self.bot_group = np.repeat(np.arange(num_bot_groups), num_bots_per_group)
 
@@ -75,8 +136,39 @@ class Simulation:
     def group_idx(self):
         return np.arange(self.num_bot_groups)
 
+    def generate_colors(self):
+        """
+        Can be called from gui.
+        """
+        self.group_col = np.vstack([Color.random_vibrant() for i in self.group_idx])
+
+    def reset_pos(self):
+        """
+        Can be called from gui
+        """
+        self.bot_pos = np.full((self.num_bots, 2), np.divide(self.env_dim, 2))
+
     def update(self):
         
+        # Read bot sensors and determine direction preference
+        for g in self.group_idx:
+            group_mask = self.bot_group==g
+
+            group_bot_pos = self.bot_pos[group_mask]
+            group_bot_angles = self.bot_angles[group_mask]
+            group_trail = self.group_trails[g]
+
+            group_sensor_values = np.zeros((self.num_bots_per_group, len(self.sensor_angles)))
+
+            for a, sensor_angle in enumerate(self.sensor_angles):
+                group_sensor_values[:,a] = read_all_sensors(
+                    group_trail, group_bot_pos, group_bot_angles, self.sensor_distance, 
+                    self.sensor_size, sensor_angle)
+            
+            # Nudge angle to highest sensor value
+            group_angle_preference = self.sensor_angles[group_sensor_values.argmax(axis=1)]
+            self.bot_angles[group_mask] += self.angle_nudge * group_angle_preference 
+
         # Randomly adjust bot angles
         self.bot_angles += np.random.uniform(
             low=-self.randomness,
@@ -110,13 +202,13 @@ class Simulation:
         self.bot_angles = self.bot_angles % (2 * pi)
 
         # Update the trails of each group with the new positions of its bot members
-        for i in self.group_idx:
-            bot_int_pos = self.bot_pos[self.bot_group==i].astype(int).T
-            self.group_trails[i, *bot_int_pos] = 1
+        for g in self.group_idx:
+            bot_int_pos = self.bot_pos[self.bot_group==g].astype(int).T
+            self.group_trails[g, *bot_int_pos] = 1
 
         # Blur and apply decay to the trails of each group
-        for i in self.group_idx:
-            self.group_trails[i] = blur_array(self.group_trails[i], self.blur_factor)
+        for g in self.group_idx:
+            self.group_trails[g] = blur_array(self.group_trails[g], self.blur_factor)
 
         self.group_trails *= (1 - self.decay)
 
@@ -125,7 +217,7 @@ class Simulation:
         # Initialize color array
         arr_draw_rgb = arr_draw_rgb = np.zeros((*self.env_dim, 3))
 
-        # apply bot color to trails and combine into color array
+        # apply bot color to trails and combine their average into color array
         for i in self.group_idx:
             trail_col = self.group_col[i] * self.group_trails[i,:,:,np.newaxis]
             arr_draw_rgb += trail_col
@@ -161,22 +253,26 @@ class App(Application):
 
 
 def main():
-    window_size = (200,200)
+    window_size = (1200,800)
     simulation = Simulation(
-        env_dim=(100, 100),
+        env_dim=(300, 200),
         window_size=window_size,
         num_bot_groups=4,
-        num_bots_per_group=50)
+        num_bots_per_group=500)
     app = App(window_size, simulation)
 
     app.set_gui([
-        Slider(simulation, 'brightness', domain=(0, 1), default=0.1, pos=(10, 10), width=60, height=20),
-        Slider(simulation, 'bot_accent', domain=(0, 1), default=0.2, pos=(10, 20), width=60, height=20),
-        Slider(simulation, 'blur_factor', domain=(0, 0.5), default=0.25, pos=(10, 30), width=60, height=20),
-        Slider(simulation, 'decay', domain=(0, 0.2), default=0.01, pos=(10, 40), width=60, height=20),
-        Slider(simulation, 'bot_speed', domain=(-5, 5), default=2, pos=(10, 50), width=60, height=20),
-        Slider(simulation, 'randomness', domain=(0, 1), default=0.1, pos=(10, 60), width=60, height=20),
+        Slider(simulation, 'brightness', domain=(0, 1), default=1, pos=(10, 10), width=80, height=20),
+        Slider(simulation, 'bot_accent', domain=(0, 1), default=0.15, pos=(10, 20), width=80, height=20),
+        Slider(simulation, 'blur_factor', domain=(0, 0.5), default=0.3, pos=(10, 30), width=80, height=20),
+        Slider(simulation, 'decay', domain=(0, 0.2), default=0.04, pos=(10, 40), width=80, height=20),
+        Slider(simulation, 'bot_speed', domain=(0, 3), default=1.5, pos=(10, 50), width=80, height=20),
+        Slider(simulation, 'randomness', domain=(0, 1), default=0.1, pos=(10, 60), width=80, height=20),
+        Slider(simulation, 'angle_nudge', domain=(0, 0.3), default=0, pos=(10, 70), width=80, height=20),
+        Button(text='colors', func=simulation.generate_colors, pos=(window_size[0]-70, 10), width=60, height=20),
+        Button(text='reset pos', func=simulation.reset_pos, pos=(window_size[0]-70, 40), width=60, height=20)
     ])
+
 
     app.run()
     pygame.quit()
