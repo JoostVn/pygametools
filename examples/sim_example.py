@@ -6,13 +6,14 @@ import numpy as np
 from numba import jit, float64, int32, boolean, prange
 from math import pi
 
-
-
-# TODO: bounce agents on the border
-# TODO: agent membership in arrays or with membership arr (note: maybe membership arr is easier to change?)
-# TODO: jist get_neigbours function (used in blur and trail following)
+# TODO: change agent name to bot
+# TODO: agent membership with membership arr 
+# TODO: make sure pos is always an integer
+# TODO: agent accent slider and accent in group color
+# TODO: jit get_neigbours function (used in blur and trail following)
 # TODO: why are the trails so dull? fix.
 # TODO: debug array: override all drawing to just display one array (for example, debug trails)
+
 
 
 @jit(float64[:,:](float64[:,:], float64), nopython=True, parallel=True)
@@ -41,6 +42,7 @@ class Simulation:
 
         # Settings
         self.brightness = 0.1
+        self.agent_accent = 0.5
         self.blur_factor = 0
         self.decay = 0
         self.agent_speed = 0.2
@@ -56,8 +58,7 @@ class Simulation:
             0*pi, 2*pi, (num_agent_groups, num_agents_per_group))
         self.agent_trails = np.zeros(
             (num_agent_groups, *self.env_dim))
-        
-        self.agent_col = Color.random_different(num_agent_groups)
+        self.agent_col = np.vstack([Color.random_vibrant() for i in self.group_idx])
 
     @property
     def group_idx(self):
@@ -117,10 +118,10 @@ class Simulation:
         
         arr_draw_rgb = arr_draw_rgb / self.num_agent_groups
         
-        # Place agents on color array
+        # Accent agents positions on color array
         agent_x = tuple(self.agent_pos[:,:,0].flatten().astype(int))
         agent_y = tuple(self.agent_pos[:,:,1].flatten().astype(int))
-        arr_draw_rgb[agent_x, agent_y, :] = 210
+        arr_draw_rgb[agent_x, agent_y, :] += self.agent_accent * (255 - arr_draw_rgb[agent_x, agent_y, :])
 
         # Adjust brightness and draw zoomed/panned color array
         arr_draw_rgb = arr_draw_rgb * self.brightness
@@ -146,9 +147,9 @@ class App(Application):
 
 
 def gui_test():
-    window_size = (600,600)
+    window_size = (200,200)
     simulation = Simulation(
-        env_dim=(300, 300),
+        env_dim=(100, 100),
         window_size=window_size,
         num_agent_groups=4,
         num_agents_per_group=50)
@@ -159,8 +160,16 @@ def gui_test():
             obj=simulation,
             attribute='brightness',
             domain=(0, 1),
-            default=1,
+            default=0.1,
             pos=(10, 10),
+            width=60,
+            height=20),
+        Slider(
+            obj=simulation,
+            attribute='agent_accent',
+            domain=(0, 1),
+            default=0.2,
+            pos=(10, 20),
             width=60,
             height=20),
         Slider(
@@ -168,7 +177,7 @@ def gui_test():
             attribute='blur_factor',
             domain=(0, 0.5),
             default=0.25,
-            pos=(10, 20),
+            pos=(10, 30),
             width=60,
             height=20),
         Slider(
@@ -176,7 +185,7 @@ def gui_test():
             attribute='decay',
             domain=(0, 0.2),
             default=0.01,
-            pos=(10, 30),
+            pos=(10, 40),
             width=60,
             height=20),
         Slider(
@@ -184,7 +193,7 @@ def gui_test():
             attribute='agent_speed',
             domain=(-5, 5),
             default=2,
-            pos=(10, 40),
+            pos=(10, 50),
             width=60,
             height=20),
         Slider(
@@ -192,7 +201,7 @@ def gui_test():
             attribute='randomness',
             domain=(0, 1),
             default=0.1,
-            pos=(10, 50),
+            pos=(10, 60),
             width=60,
             height=20),
     ])
