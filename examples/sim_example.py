@@ -18,7 +18,6 @@ from math import pi, cos, sin
 # TODO: make sure pos is always an integer
 # TODO: bot accent slider and accent in group color
 
-
 # UNPRIORITIZED
 # TODO: Refactor - move bot vars to BotSwarm class, all pos/angle etc. methods to functions
 # TODO: why are the trails so dull? fix.
@@ -35,6 +34,8 @@ from math import pi, cos, sin
 # TODO: Flock bird algorithm
 # TODO: 3 pixel bots for clearer direction
 # TODO: Ant colony optimization
+# TODO: Random groups get a "glow spike (more brightness)" that quickly fades out
+
 
 @jit(float64[:,:](float64[:,:], int64, int64, float64), nopython=True)
 def get_subarray(arr, i, j, span):
@@ -260,26 +261,94 @@ def main():
         window_size=window_size,
         num_bot_groups=4,
         num_bots_per_group=500)
+    simulation.reset_pos()
+    simulation.group_col = np.linspace(
+        start=(255,0,100),
+        stop=(0,100,255),
+        num=simulation.num_bot_groups,
+        endpoint=True)    
+
     app = App(window_size, simulation)
 
     app.set_gui([
-        Slider(simulation, 'brightness', domain=(0, 1), default=1, pos=(10, 10), width=80, height=20, theme_name='default_dark'),
-        Slider(simulation, 'bot_accent', domain=(0, 1), default=0.15, pos=(10, 20), width=80, height=20, theme_name='default_dark'),
-        Slider(simulation, 'blur_factor', domain=(0, 0.5), default=0.35, pos=(10, 30), width=80, height=20, theme_name='default_dark'),
-        Slider(simulation, 'decay', domain=(0, 0.2), default=0.03, pos=(10, 40), width=80, height=20, theme_name='default_dark'),
-        Slider(simulation, 'bot_speed', domain=(0, 3), default=1.2, pos=(10, 50), width=80, height=20, theme_name='default_dark'),
-        Slider(simulation, 'randomness', domain=(0, 1), default=0.2, pos=(10, 60), width=80, height=20, theme_name='default_dark'),
-        Slider(simulation, 'angle_nudge', domain=(0, 0.3), default=0.15, pos=(10, 70), width=80, height=20, theme_name='default_dark'),
-        Button(text='colors', func=simulation.generate_colors, pos=(window_size[0]-70, 10), width=60, height=20, theme_name='default_dark'),
-        Button(text='reset pos', func=simulation.reset_pos, pos=(window_size[0]-70, 40), width=60, height=20, theme_name='default_dark')
+        Slider(
+            simulation,
+            'brightness',
+            domain=(0, 1),
+            default=1,
+            pos=(10, 10),
+            width=80,
+            height=20,
+            theme_name='default_dark'),
+        Slider(
+            simulation,
+            'bot_accent',
+            domain=(0, 1),
+            default=0.15,
+            pos=(10, 20),
+            width=80,
+            height=20,
+            theme_name='default_dark'),
+        Slider(
+            simulation,
+            'blur_factor',
+            domain=(0, 0.5),
+            default=0.35,
+            pos=(10, 30),
+            width=80,
+            height=20,
+            theme_name='default_dark'),
+        Slider(
+            simulation,
+            'decay',
+            domain=(0, 0.2),
+            default=0.03,
+            pos=(10, 40),
+            width=80,
+            height=20,
+            theme_name='default_dark'),
+        Slider(
+            simulation,
+            'bot_speed',
+            domain=(0, 3),
+            default=1.2,
+            pos=(10, 50),
+            width=80,
+            height=20,
+            theme_name='default_dark'),
+        Slider(
+            simulation,
+            'randomness',
+            domain=(0, 1),
+            default=0.2,
+            pos=(10, 60),
+            width=80,
+            height=20,
+            theme_name='default_dark'),
+        Slider(
+            simulation,
+            'angle_nudge',
+            domain=(0, 0.3),
+            default=0.15,
+            pos=(10, 70),
+            width=80,
+            height=20,
+            theme_name='default_dark'),
+        Button(
+            text='colors',
+            func=simulation.generate_colors,
+            pos=(window_size[0]-70, 10),
+            width=60,
+            height=20,
+            theme_name='default_dark'),
+        Button(
+            text='reset pos',
+            func=simulation.reset_pos,
+            pos=(window_size[0]-70, 40),
+            width=60,
+            height=20,
+            theme_name='default_dark')
     ])
-
-    simulation.reset_pos()
-
-    simulation.group_col = np.linspace(
-        (255,0,100), (0,100,255), num=simulation.num_bot_groups, endpoint=True)
-
-   
 
     app.run()
     pygame.quit()
