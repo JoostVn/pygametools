@@ -35,6 +35,7 @@ from math import pi, cos, sin
 # TODO: 3 pixel bots for clearer direction
 # TODO: Ant colony optimization
 # TODO: Random groups get a "glow spike (more brightness)" that quickly fades out
+# TODO: Avoid (or atract) mouse
 
 
 @jit(float64[:,:](float64[:,:], int64, int64, float64), nopython=True)
@@ -113,6 +114,7 @@ class Simulation:
         self.bot_speed = 0.2
         self.randomness = 0.1
         self.angle_nudge = 0.2
+        self.avoidance = 0.5
 
         # Settings (constant)
         self.sensor_distance = 4
@@ -159,13 +161,19 @@ class Simulation:
             group_bot_pos = self.bot_pos[group_mask]
             group_bot_angles = self.bot_angles[group_mask]
             group_trail = self.group_trails[g]
+            other_trail = self.group_trails[self.group_idx[self.group_idx!=g]].mean(axis=0)
 
             group_sensor_values = np.zeros((self.num_bots_per_group, len(self.sensor_angles)))
 
             for a, sensor_angle in enumerate(self.sensor_angles):
-                group_sensor_values[:,a] = read_all_sensors(
+                sensor_group = read_all_sensors(
                     group_trail, group_bot_pos, group_bot_angles, self.sensor_distance, 
                     self.sensor_size, sensor_angle)
+                sensor_other = read_all_sensors(
+                    other_trail, group_bot_pos, group_bot_angles, self.sensor_distance, 
+                    self.sensor_size, sensor_angle)
+                
+                group_sensor_values[:,a] = (1-self.avoidance) * sensor_group - self.avoidance * sensor_other
             
             # Nudge angle to highest sensor value
             group_angle_preference = self.sensor_angles[group_sensor_values.argmax(axis=1)]
@@ -255,12 +263,12 @@ class App(Application):
 
 
 def main():
-    window_size = (600,400)
+    window_size = (400,300)
     simulation = Simulation(
-        env_dim=(300, 200),
+        env_dim=(200, 150),
         window_size=window_size,
         num_bot_groups=4,
-        num_bots_per_group=500)
+        num_bots_per_group=300)
     simulation.reset_pos()
     simulation.group_col = np.linspace(
         start=(255,0,100),
@@ -331,6 +339,15 @@ def main():
             domain=(0, 0.3),
             default=0.15,
             pos=(10, 70),
+            width=80,
+            height=20,
+            theme_name='default_dark'),
+        Slider(
+            simulation,
+            'avoidance',
+            domain=(0, 1),
+            default=0.2,
+            pos=(10, 80),
             width=80,
             height=20,
             theme_name='default_dark'),
