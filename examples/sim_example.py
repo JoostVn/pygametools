@@ -380,12 +380,13 @@ def main():
             width=80,
             height=20,
             theme_name=theme),
+
         Slider(
             simulation,
             'blur_factor',
             domain=(0, 0.5),
             default=0.35,
-            pos=(10, 30),
+            pos=(10, 50),
             width=80,
             height=20,
             theme_name=theme),
@@ -393,47 +394,13 @@ def main():
             simulation,
             'decay',
             domain=(0, 0.2),
-            default=0.07,
-            pos=(10, 40),
-            width=80,
-            height=20,
-            theme_name=theme),
-        Slider(
-            simulation,
-            'bot_speed',
-            domain=(0, 3),
-            default=1.2,
-            pos=(10, 50),
-            width=80,
-            height=20,
-            theme_name=theme),
-        Slider(
-            simulation,
-            'randomness',
-            domain=(0, 1),
-            default=0.2,
+            default=0.1,
             pos=(10, 60),
             width=80,
             height=20,
             theme_name=theme),
-        Slider(
-            simulation,
-            'angle_nudge',
-            domain=(0, 0.3),
-            default=0.25,
-            pos=(10, 70),
-            width=80,
-            height=20,
-            theme_name=theme),
-        Slider(
-            simulation,
-            'avoidance',
-            domain=(0, 1),
-            default=0.75,
-            pos=(10, 80),
-            width=80,
-            height=20,
-            theme_name=theme),
+
+
         Slider(
             simulation,
             'num_bots',
@@ -452,6 +419,49 @@ def main():
             width=80,
             height=20,
             theme_name=theme),
+
+        
+
+
+
+        Slider(
+            simulation,
+            'bot_speed',
+            domain=(0, 3),
+            default=1.2,
+            pos=(10, 130),
+            width=80,
+            height=20,
+            theme_name=theme),
+        Slider(
+            simulation,
+            'randomness',
+            domain=(0, 1),
+            default=0.2,
+            pos=(10, 140),
+            width=80,
+            height=20,
+            theme_name=theme),
+        Slider(
+            simulation,
+            'angle_nudge',
+            domain=(0, 0.3),
+            default=0.25,
+            pos=(10, 150),
+            width=80,
+            height=20,
+            theme_name=theme),
+        Slider(
+            simulation,
+            'avoidance',
+            domain=(0, 1),
+            default=0.75,
+            pos=(10, 160),
+            width=80,
+            height=20,
+            theme_name=theme),
+        
+
         Button(
             text='colors',
             func=simulation.generate_colors,
