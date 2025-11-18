@@ -313,7 +313,8 @@ class Simulation:
             trail_col = self.group_col[i] * self.group_trails[i,:,:,np.newaxis]
             arr_draw_rgb += trail_col
         
-        arr_draw_rgb = arr_draw_rgb / self.num_bot_groups
+        arr_draw_rgb = np.clip(arr_draw_rgb, 0, 255)
+
         
         # Accent bots positions on color array by making them brighter
         bot_x = tuple(self.bot_pos[:,0].flatten().astype(int))
@@ -392,7 +393,7 @@ def main():
             simulation,
             'decay',
             domain=(0, 0.2),
-            default=0.03,
+            default=0.07,
             pos=(10, 40),
             width=80,
             height=20,
@@ -436,7 +437,7 @@ def main():
         Slider(
             simulation,
             'num_bots',
-            domain=(1, 5000),
+            domain=(1, 10000),
             default=2500,
             pos=(10, 90),
             width=80,
