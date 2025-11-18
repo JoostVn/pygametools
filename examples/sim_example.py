@@ -6,36 +6,41 @@ import numpy as np
 from numba import jit, float64, int32, int64, boolean, prange
 from math import pi, cos, sin
 
-# DONE / THIS COMMIT
 
 # TO DO / THIS COMMIT
-# TODO: have sensor value just return the highest angle 
-# TODO: jit get_neigbours function (used in blur and trail following)
-# TODO: add trail detection and following
 
-# PRIORITIZED
-# TODO: maybe use taichi instead of numba for optimization?
-# TODO: make sure pos is always an integer
-# TODO: bot accent slider and accent in group color
+
+# PRIORITIZED (colors, trails, and viz)
+# TODO: reset all in addition to reset pos button
+# TODO: interpolate trails between two bot positions
+# TODO: fix muddy colors when multiple trails are combined
+# TODO: why are the trails so dull? fix.
+# TODO: randomize button for all settings
+
+# PRIORITIZED (optimization and refactor)
+# TODO: smaller sensors? (array is already box blurred, so why take another box?)
+# TODO: optimize!
+# TODO: test performance for parrallel / non parrallel functions
+# TODO: numba 32 oe 64 bit variables?
+# TODO: Determine what variables should be _internal
+
+# PRIORITIZED (mouse interaction)
+# TODO: Avoid (or atract) mouse (gravity style, push or pull for RMB and LMB)
+# TODO: Bots closer to mouse during interaction are brighter
+
+
+
 
 # UNPRIORITIZED
+# TODO: maybe use taichi instead of numba for optimization?
 # TODO: Refactor - move bot vars to BotSwarm class, all pos/angle etc. methods to functions
-# TODO: why are the trails so dull? fix.
-# TODO: debug array: override all drawing to just display one array (for example, debug trails)
-# TODO: Move bounce to outside function
-# TODO: Add more options for edge handling (nudge + teleport)
-# TODO: test performance for parrallel / non parrallel functions
-# TODO: fix muddy colors when multiple trails are combined
-# TODO: numba 32 oe 64 bit variables?
-# TODO: interpolate trails between two bot positions
 
 # IDEAS
-# TODO: editable/moving "group affinity" matrix of groups that either attracts (1) or opposes (-1) 
 # TODO: Flock bird algorithm
-# TODO: 3 pixel bots for clearer direction
+# TODO: 3 pixels long bots for clearer direction
 # TODO: Ant colony optimization
 # TODO: Random groups get a "glow spike (more brightness)" that quickly fades out
-# TODO: Avoid (or atract) mouse
+
 
 
 @jit(float64[:,:](float64[:,:], int64, int64, float64), nopython=True)
@@ -100,11 +105,14 @@ class Simulation:
     def __init__(
             self,
             env_dim: tuple[int, int],
-            window_size: tuple[int, int],
-            num_bot_groups: int,
-            num_bots_per_group: int):
+            window_size: tuple[int, int]):
         self.env_dim = env_dim
         self.window_size = window_size
+
+        # Settings (constant)
+        self.sensor_distance = 4
+        self.sensor_size = 1
+        self.sensor_angles = np.array([-0.2*pi, 0, 0.2*pi])
 
         # Settings (variable based on slider)
         self.brightness = 0.1
@@ -116,54 +124,124 @@ class Simulation:
         self.angle_nudge = 0.2
         self.avoidance = 0.5
 
-        # Settings (constant)
-        self.sensor_distance = 4
-        self.sensor_size = 1
-        self.sensor_angles = np.array([-0.2*pi, 0, 0.2*pi])
+        # Num bots and num bot groups
+        self._num_bots = 1
+        self._num_bot_groups = 1
+        
+        # Bot/group variable based on num bots/groups
+        self.bot_membership = np.zeros((0,))
+        self.bot_pos = np.zeros((0, 2))
+        self.bot_angles = np.zeros((0,))
+        self.group_trails = np.zeros((0, *self.env_dim))
+        self.group_col = np.zeros((0, 3))           # TODO: is this shape correct?
+        
+        self.update_bot_counts()
+    
+    @property
+    def num_bots(self):
+        return self._num_bots
+    
+    @num_bots.setter
+    def num_bots(self, val):
+        self._num_bots = int(round(val, 0))
+        self.update_bot_counts()
 
-        # Bot contants
-        self.num_bot_groups = num_bot_groups
-        self.num_bots_per_group = num_bots_per_group
-        self.num_bots = self.num_bot_groups * self.num_bots_per_group
+    @property
+    def num_bot_groups(self):
+        return self._num_bot_groups
+    
+    @num_bot_groups.setter
+    def num_bot_groups(self, val):
+        self._num_bot_groups = int(round(val, 0))
+        self.update_bot_counts()
 
-        # Bot data
-        self.bot_pos = np.random.uniform((0,0), self.env_dim, (self.num_bots, 2))
-        self.bot_angles = np.random.uniform(0, 2*pi, size=self.num_bots)
-        self.bot_group = np.repeat(np.arange(num_bot_groups), num_bots_per_group)
-
-        # Group data
-        self.group_trails = np.zeros((num_bot_groups, *self.env_dim))
-        self.group_col = np.vstack([Color.random_vibrant() for i in self.group_idx])
-
+    # Derived properties
     @property
     def group_idx(self):
         return np.arange(self.num_bot_groups)
+    
+    @property
+    def min_num_bots_per_group(self):
+        return int(self._num_bots / self._num_bot_groups)
 
+    # Methods called as a result of changes in properties
     def generate_colors(self):
         """
-        Can be called from gui.
+        Called from dedicated button in gui.
         """
         self.group_col = np.vstack([Color.random_vibrant() for i in self.group_idx])
         print(self.group_col)
 
     def reset_pos(self):
         """
-        Can be called from gui
+        Called from dedicated button in gui.
         """
         self.bot_pos = np.full((self.num_bots, 2), np.divide(self.env_dim, 2))
 
+    def reset_all(self):
+        """
+        Called from dedicated button in gui.
+        """
+        self.reset_pos()
+        self.group_trails[:] = 0
+
+    def update_bot_counts(self):
+        """
+        Called when the number of bots/groups are updateted to re-determine memberships.
+        """
+        # Update bot membership and deal with uneven bot group counts
+        bot_membership = np.repeat(self.group_idx, self.min_num_bots_per_group)
+        num_bots_too_little = self._num_bots - bot_membership.shape[0]
+        extra_bots = self.group_idx[:num_bots_too_little]
+        self.bot_membership = np.hstack([bot_membership, extra_bots])
+
+        # Determine deltas
+        delta_num_groups = self._num_bot_groups - self.group_trails.shape[0]
+        delta_num_bots = self._num_bots - self.bot_pos.shape[0]
+
+        # Update pos
+        if delta_num_bots > 0:
+            new_pos = np.random.uniform((0,0), self.env_dim, (delta_num_bots, 2))
+            self.bot_pos = np.vstack((self.bot_pos, new_pos))
+        else:
+            self.bot_pos = self.bot_pos[:self._num_bots]
+
+        # Update angles
+        if delta_num_bots > 0:
+            new_angles = np.random.uniform(0, 2*pi, size=delta_num_bots)
+            self.bot_angles = np.hstack((self.bot_angles, new_angles))
+        else:
+            self.bot_angles = self.bot_angles[:self._num_bots]
+
+        # Update trails
+        if delta_num_groups > 0:
+            new_trails = np.zeros((delta_num_groups, *self.group_trails.shape[1:]))
+            self.group_trails = np.vstack((self.group_trails, new_trails))
+        else:
+            self.group_trails = self.group_trails[:self._num_bot_groups]
+
+        # Update colors
+        if delta_num_groups > 0:
+            new_colors = np.vstack([Color.random_vibrant() for i in range(delta_num_groups)])
+            self.group_col = np.vstack((self.group_col, new_colors))
+        else:
+            self.group_col = self.group_col[:self._num_bot_groups]
+
+        
+
+    # Simulation methods
     def update(self):
         
         # Read bot sensors and determine direction preference
         for g in self.group_idx:
-            group_mask = self.bot_group==g
+            group_mask = self.bot_membership==g
 
             group_bot_pos = self.bot_pos[group_mask]
             group_bot_angles = self.bot_angles[group_mask]
             group_trail = self.group_trails[g]
             other_trail = self.group_trails[self.group_idx[self.group_idx!=g]].mean(axis=0)
 
-            group_sensor_values = np.zeros((self.num_bots_per_group, len(self.sensor_angles)))
+            group_sensor_values = np.zeros((group_mask.sum(), len(self.sensor_angles)))
 
             for a, sensor_angle in enumerate(self.sensor_angles):
                 sensor_group = read_all_sensors(
@@ -173,8 +251,11 @@ class Simulation:
                     other_trail, group_bot_pos, group_bot_angles, self.sensor_distance, 
                     self.sensor_size, sensor_angle)
                 
-                group_sensor_values[:,a] = (1-self.avoidance) * sensor_group - self.avoidance * sensor_other
-            
+                if self._num_bot_groups > 1: 
+                    group_sensor_values[:,a] = (1-self.avoidance) * sensor_group - self.avoidance * sensor_other
+                else:
+                    group_sensor_values[:,a] = sensor_group
+ 
             # Nudge angle to highest sensor value
             group_angle_preference = self.sensor_angles[group_sensor_values.argmax(axis=1)]
             self.bot_angles[group_mask] += self.angle_nudge * group_angle_preference 
@@ -213,7 +294,7 @@ class Simulation:
 
         # Update the trails of each group with the new positions of its bot members
         for g in self.group_idx:
-            bot_int_pos = self.bot_pos[self.bot_group==g].astype(int).T
+            bot_int_pos = self.bot_pos[self.bot_membership==g].astype(int).T
             self.group_trails[g, *bot_int_pos] = 1
 
         # Blur and apply decay to the trails of each group
@@ -258,27 +339,28 @@ class App(Application):
     def update(self):
         self.simulation.update()
 
+        if pygame.BUTTON_LEFT in self.key_events['hold']:
+            print(pygame.mouse.get_pos())
+
     def draw(self):
         self.simulation.draw(self.screen, self.zoom, self.pan_offset)
 
 
 def main():
-    window_size = (400,300)
+
+    
+    # theme = 'default_light'
+    theme = 'default_dark'
+
+    window_size = (750,750)
     simulation = Simulation(
-        env_dim=(200, 150),
-        window_size=window_size,
-        num_bot_groups=4,
-        num_bots_per_group=300)
+        env_dim=(250, 250),
+        window_size=window_size)
     simulation.reset_pos()
-    simulation.group_col = np.linspace(
-        start=(255,0,100),
-        stop=(0,100,255),
-        num=simulation.num_bot_groups,
-        endpoint=True)    
 
     app = App(window_size, simulation)
 
-    app.set_gui([
+    gui_list = [
         Slider(
             simulation,
             'brightness',
@@ -287,7 +369,7 @@ def main():
             pos=(10, 10),
             width=80,
             height=20,
-            theme_name='default_dark'),
+            theme_name=theme),
         Slider(
             simulation,
             'bot_accent',
@@ -296,7 +378,7 @@ def main():
             pos=(10, 20),
             width=80,
             height=20,
-            theme_name='default_dark'),
+            theme_name=theme),
         Slider(
             simulation,
             'blur_factor',
@@ -305,7 +387,7 @@ def main():
             pos=(10, 30),
             width=80,
             height=20,
-            theme_name='default_dark'),
+            theme_name=theme),
         Slider(
             simulation,
             'decay',
@@ -314,7 +396,7 @@ def main():
             pos=(10, 40),
             width=80,
             height=20,
-            theme_name='default_dark'),
+            theme_name=theme),
         Slider(
             simulation,
             'bot_speed',
@@ -323,7 +405,7 @@ def main():
             pos=(10, 50),
             width=80,
             height=20,
-            theme_name='default_dark'),
+            theme_name=theme),
         Slider(
             simulation,
             'randomness',
@@ -332,40 +414,67 @@ def main():
             pos=(10, 60),
             width=80,
             height=20,
-            theme_name='default_dark'),
+            theme_name=theme),
         Slider(
             simulation,
             'angle_nudge',
             domain=(0, 0.3),
-            default=0.15,
+            default=0.25,
             pos=(10, 70),
             width=80,
             height=20,
-            theme_name='default_dark'),
+            theme_name=theme),
         Slider(
             simulation,
             'avoidance',
             domain=(0, 1),
-            default=0.2,
+            default=0.75,
             pos=(10, 80),
             width=80,
             height=20,
-            theme_name='default_dark'),
+            theme_name=theme),
+        Slider(
+            simulation,
+            'num_bots',
+            domain=(1, 5000),
+            default=2500,
+            pos=(10, 90),
+            width=80,
+            height=20,
+            theme_name=theme),
+        Slider(
+            simulation,
+            'num_bot_groups',
+            domain=(1, 8),
+            default=3,
+            pos=(10, 100),
+            width=80,
+            height=20,
+            theme_name=theme),
         Button(
             text='colors',
             func=simulation.generate_colors,
             pos=(window_size[0]-70, 10),
             width=60,
             height=20,
-            theme_name='default_dark'),
+            theme_name=theme),
         Button(
             text='reset pos',
             func=simulation.reset_pos,
             pos=(window_size[0]-70, 40),
             width=60,
             height=20,
-            theme_name='default_dark')
-    ])
+            theme_name=theme),
+        Button(
+            text='reset all',
+            func=simulation.reset_all,
+            pos=(window_size[0]-70, 70),
+            width=60,
+            height=20,
+            theme_name=theme)
+    ]
+
+    app.set_gui(gui_list)
 
     app.run()
     pygame.quit()
