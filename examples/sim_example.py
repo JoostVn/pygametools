@@ -10,12 +10,8 @@ from math import pi, cos, sin
 # TO DO / THIS COMMIT
 
 
-# PRIORITIZED (colors, trails, and viz)
-# TODO: reset all in addition to reset pos button
+# PRIORITIZED (interpolation)
 # TODO: interpolate trails between two bot positions
-# TODO: fix muddy colors when multiple trails are combined
-# TODO: why are the trails so dull? fix.
-# TODO: randomize button for all settings
 
 # PRIORITIZED (optimization and refactor)
 # TODO: smaller sensors? (array is already box blurred, so why take another box?)
@@ -28,8 +24,8 @@ from math import pi, cos, sin
 # TODO: Avoid (or atract) mouse (gravity style, push or pull for RMB and LMB)
 # TODO: Bots closer to mouse during interaction are brighter
 
-
-
+# PRIORITIZED 
+# TODO: Make sure that zooming out is bounded by the size of the environment
 
 # UNPRIORITIZED
 # TODO: maybe use taichi instead of numba for optimization?
@@ -393,7 +389,7 @@ def main():
         Slider(
             simulation,
             'decay',
-            domain=(0, 0.2),
+            domain=(0, 0.4),
             default=0.1,
             pos=(10, 60),
             width=80,
