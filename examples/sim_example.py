@@ -13,6 +13,9 @@ from math import pi, cos, sin
 # PRIORITIZED (interpolation)
 # TODO: interpolate trails between two bot positions
 
+# PRIORITIZED (UI)
+# TODO: UI from json file
+
 # PRIORITIZED (optimization and refactor)
 # TODO: smaller sensors? (array is already box blurred, so why take another box?)
 # TODO: optimize!
@@ -348,8 +351,9 @@ def main():
     
     # theme = 'default_light'
     theme = 'default_dark'
+    ui_width = 60
 
-    window_size = (750,750)
+    window_size = (500,500)
     simulation = Simulation(
         env_dim=(250, 250),
         window_size=window_size)
@@ -362,9 +366,9 @@ def main():
             simulation,
             'brightness',
             domain=(0, 1),
-            default=1,
+            default=0,
             pos=(10, 10),
-            width=80,
+            width=ui_width,
             height=20,
             theme_name=theme),
         Slider(
@@ -373,7 +377,7 @@ def main():
             domain=(0, 1),
             default=0.15,
             pos=(10, 20),
-            width=80,
+            width=ui_width,
             height=20,
             theme_name=theme),
 
@@ -383,7 +387,7 @@ def main():
             domain=(0, 0.5),
             default=0.35,
             pos=(10, 50),
-            width=80,
+            width=ui_width,
             height=20,
             theme_name=theme),
         Slider(
@@ -392,7 +396,7 @@ def main():
             domain=(0, 0.4),
             default=0.1,
             pos=(10, 60),
-            width=80,
+            width=ui_width,
             height=20,
             theme_name=theme),
 
@@ -403,7 +407,7 @@ def main():
             domain=(1, 10000),
             default=2500,
             pos=(10, 90),
-            width=80,
+            width=ui_width,
             height=20,
             theme_name=theme),
         Slider(
@@ -412,7 +416,7 @@ def main():
             domain=(1, 8),
             default=3,
             pos=(10, 100),
-            width=80,
+            width=ui_width,
             height=20,
             theme_name=theme),
 
@@ -426,7 +430,7 @@ def main():
             domain=(0, 3),
             default=1.2,
             pos=(10, 130),
-            width=80,
+            width=ui_width,
             height=20,
             theme_name=theme),
         Slider(
@@ -435,7 +439,7 @@ def main():
             domain=(0, 1),
             default=0.2,
             pos=(10, 140),
-            width=80,
+            width=ui_width,
             height=20,
             theme_name=theme),
         Slider(
@@ -444,7 +448,7 @@ def main():
             domain=(0, 0.3),
             default=0.25,
             pos=(10, 150),
-            width=80,
+            width=ui_width,
             height=20,
             theme_name=theme),
         Slider(
@@ -453,7 +457,7 @@ def main():
             domain=(0, 1),
             default=0.75,
             pos=(10, 160),
-            width=80,
+            width=ui_width,
             height=20,
             theme_name=theme),
         
@@ -462,21 +466,21 @@ def main():
             text='colors',
             func=simulation.generate_colors,
             pos=(window_size[0]-70, 10),
-            width=60,
+            width=ui_width,
             height=20,
             theme_name=theme),
         Button(
             text='reset pos',
             func=simulation.reset_pos,
             pos=(window_size[0]-70, 40),
-            width=60,
+            width=ui_width,
             height=20,
             theme_name=theme),
         Button(
             text='reset all',
             func=simulation.reset_all,
             pos=(window_size[0]-70, 70),
-            width=60,
+            width=ui_width,
             height=20,
             theme_name=theme)
     ]
