@@ -12,20 +12,18 @@ from pygametools.gui.base import Application
 import pygame
 from pygametools.gui.elements import Button, Slider, Label
 
-
 class PlotTestApp(Application):
 
     def __init__(self, window_size):
         super().__init__(window_size)
         self.plots = []
 
-
     def add_plot(self, plot):
         self.plots.append(plot)
 
     def update(self):
 
-
+        pass
         # Testing dynamic pos
         if False:
             self.plots[0].update_dimensions(pos=self.plots[0].pos + 1)
@@ -40,23 +38,13 @@ class PlotTestApp(Application):
             self.plots[0].update_dimensions(pad=new_pad)
 
         # Testing dynamic domain
-        if True:
+        if False:
             new_dom = self.plots[0].dom.copy().astype(float)
 
             new_dom[0,1] = new_dom[0,1] * 1.01
             new_dom[1,1] = new_dom[1,1] * 1.01
 
-
             self.plots[0].update_dimensions(dom=new_dom)
-
-
-
-
-        # Test
-
-
-
-
 
     def draw(self):
         for plot in self.plots:
@@ -66,16 +54,13 @@ class PlotTestApp(Application):
 
 def main():
 
-
-
-
-
     # Create test plot
     plot = Canvas(
         pos=(20,40),
         dim=(350,250),
-        domx=(-5,10),
-        domy=(-10,30),
+        xdom=(-5,10),
+        ydom=(-10,30),
+        
         title="Plot for testing purposes")
 
     plot.axisx.set_num_ticks(10)

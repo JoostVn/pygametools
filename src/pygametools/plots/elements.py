@@ -1,8 +1,22 @@
 """
 Elements:
-    - Canvas: Rectangle that contains ALL other plot elements. Also contains
-    all properties of the plot such as its
+    - Canvas: Rectangle that contains ALL other plot elements.
+    - PlotMetrics: contains top-level dimensions, positions, domains. Also 
+      notifies elements of changes. Elements only re-calculate their dimensions when they change.
 
+      # TODO: fix the circle reference between metrics and elements. Maybe remove update responsibiliy from metrics?
+      # TODO: in draw function, make sure on_axes converts coordinates instead of drawing on axes surface
+      # TODO: fix line of axes not showing up
+      # TODO: Change update_dimensions functions to update_metrics with a Literal metric
+      # TODO: render axes without surface (to prevent out of bound ticks)
+      # TODO: Fix axes: tick generation, orientation settings etc.
+      # TODO: make sure all elements are registered to metrics and update on changes
+      # TODO: test different cases
+      # TODO: make sure title, labels, ticks are drawn correctly after updates
+      # TODO: Implement legend element
+      # TODO: split update elements into dom/dim/pos/pad such that not every change needs all updates
+      # TODO: optimize metrics updates: only update elemements where relevant metrics have changed
+ 
 """
 import numpy as np
 from .draw import PlotDraw
@@ -10,140 +24,181 @@ from pygametools.color import Color
 from abc import ABC, abstractmethod
 import pygame
 from math import floor, log10
-
-
-class Canvas:
-
-    def __init__(self, pos, dim, domx, domy, **kwargs):
-        """
-        Rectangle that contains ALL other plot elements for a single plot.
-
-        Single source of truth for all plot properties.
-
-        Parameters
-        ----------
-        pos : iterable of shape (2)
-            Pygame (x, y) coordinates of top-left corner.
-        dim : iterable of shape (2)
-            Pygame (width, height) dimensions.
-        domx : iterable of shape (2)
-            Plot (x_min, x_max) domain.
-        domy : iterable of shape (2)
-            Plot (y_min, y_max) domain.
-        """
-        # Plot position and dimensions
-        self.dim = np.array(dim, dtype=np.int32)
-        self.pos = np.array(pos, dtype=np.int32)
-        self.dom = np.vstack((domx, domy), dtype=np.float64)
-
-        # Axes padding (left, top, right, bottom) relative to the canvas.
-        # The location of all other alements is based on this padding.
-        self.pad = np.array((20,20,10,10), dtype=np.int32)
-
-        # Plot color properties
-        self.colors = {
-            "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY5),
-            "canvas_line": kwargs.get("cols_canvas_line", Color.GREY3),
-            "axes_bg": kwargs.get("cols_axes_bg", Color.WHITE),
-            "axes_line": kwargs.get("cols_axes_line", Color.GREY3),
-            "axis": kwargs.get("cols_axis", Color.GREY4)}
-
-        # Plot fonts
-        pygame.init()
-        font_type = "msreferencesansserif"
-        self.fonts = {
-            "title": (pygame.font.SysFont(font_type, 12), Color.BLACK),
-            "legend": (pygame.font.SysFont(font_type, 10), Color.BLACK),
-            "tick": (pygame.font.SysFont(font_type, 8), Color.BLACK)
-            }
-
-        # Plot draw and element instances
-
-        self.axes = Axes(self)
-        self.title = Title(self, kwargs.get("title", ""))
-        self.axisx = Axis(self, Axis.X, margin=0.1)
-        self.axisy = Axis(self, Axis.Y, margin=0.1)
-        self.pdraw = PlotDraw(self)
-
-
-        # Update dimensions in all plot elements
-        self.update_dimensions()
-
-
-
-
-    def update_dimensions(self, **args):
-        """
-        Update all plot dimensions. Options for args:
-        dim, pos, domx, domy, pad.
-        TODO: use getters and setters
-        """
-        assert all((hasattr, self, key) for key in args)
-
-        for key, value in args.items():
-            setattr(self, key, value)
-
-        self.axes.update_dimensions(**args)
-        self.title.update_dimensions(**args)
-        self.axisx.update_dimensions(**args)
-        self.axisy.update_dimensions(**args)
-        self.pdraw.update_dimensions(**args)
-
-    def draw(self, surface):
-
-        self.pdraw.clear()
-
-        # Draw the canvas itself
-        self.pdraw.rect(
-            (0,0), self.dim, self.colors["canvas_bg"],
-            self.colors["canvas_line"], on_axes=False)
-
-
-        self.axes.draw()
-        self.title.draw()
-        self.axisx.draw()
-        self.axisy.draw()
-
-        self.pdraw.draw(surface)
-
-
-
-
-
-
-
-
-
-
-
-
+from typing import Literal
 
 
 class Element(ABC):
 
     def __init__(self, parent_canvas):
-        self.canvas = parent_canvas
+        self.parent_canvas = parent_canvas
+  
+    @property
+    def canvas(self):
+        return self.parent_canvas
+
+    @property
+    def metrics(self):
+        return self.canvas.metrics
+
+    @property
+    def theme(self):
+        return self.canvas.theme
 
     @property
     def colors(self):
-        return self.canvas.colors
+        return self.theme.colors
 
     @property
     def fonts(self):
-        return self.canvas.fonts
+        return self.theme.fonts
 
     @property
     def pdraw(self):
         return self.canvas.pdraw
 
     @abstractmethod
-    def update_dimensions(self, **args):
+    def update_metrics(
+            self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad'] | None=None):
         pass
 
     @abstractmethod
     def draw(self):
         pass
 
+
+class PlotTheme:
+
+    def __init__(self, **kwargs):
+        """
+        Plot color and font properties.
+        """
+        self.colors = {
+            "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY5),
+            "canvas_line": kwargs.get("cols_canvas_line", Color.GREY3),
+            "axes_bg": kwargs.get("cols_axes_bg", Color.WHITE),
+            "axes_line": kwargs.get("cols_axes_line", Color.GREY3),
+            "axis": kwargs.get("cols_axis", Color.GREY4)}        
+        font_type = "msreferencesansserif"
+        self.fonts = {
+            "title": (pygame.font.SysFont(font_type, 12), Color.BLACK),
+            "legend": (pygame.font.SysFont(font_type, 10), Color.BLACK),
+            "tick": (pygame.font.SysFont(font_type, 8), Color.BLACK)}
+        
+
+class PlotMetrics:
+
+    def __init__(
+            self, 
+            pos: tuple[int, int], 
+            dim: tuple[int, int], 
+            xdom: tuple[float, float],
+            ydom: tuple[float, float], 
+            axes_xpad: tuple[int, int]=(30,10), 
+            axes_ypad: tuple[int, int]=(40,10)):
+        
+        assert xdom[0] < xdom[1], "Invalid x domain"
+        assert ydom[0] < ydom[1], "Invalid y domain"
+
+        self._pos = np.array(pos)
+        self._dim = np.array(dim) 
+        self._xdom = np.array(xdom) 
+        self._ydom = np.array(ydom) 
+        self._axes_xpad = np.array(axes_xpad)
+        self._axes_ypad = np.array(axes_ypad)
+
+
+        # List of elements to notify on changes
+        self._elements = []  
+
+    def add_element(self, element: Element):
+        """Add an element that needs to be notified of changes"""
+        self._elements.append(element)
+
+    def update_elements(self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad']):
+        """
+        Notify all elements that metrics have changed.
+
+        The changed metric is included in the function call such that underlying elements can 
+        update only their relevant dimensions to improve performance.
+        """
+        for element in self._elements:
+            element.update_dimensions(metric)
+
+    # Top-level metrics and properties
+    @property
+    def pos(self) -> np.ndarray:
+        return self._pos
+    
+    @pos.setter
+    def pos(self, value: np.ndarray):
+        self._pos = value
+        self.update_elements(metric='pos')
+    
+    @property
+    def dim(self) -> np.ndarray:
+        return self._dim
+    
+    @dim.setter
+    def dim(self, value: np.ndarray):
+        self._dim = value
+        self.update_elements(metric='dim')
+    
+    @property
+    def xdom(self) -> np.ndarray:
+        return self._xdom
+    
+    @xdom.setter
+    def xdom(self, value: np.ndarray):
+        assert value[0] < value[1], "Invalid x domain"
+        self._xdom = value
+        self.update_elements(metric='xdom')
+
+    @property
+    def ydom(self) -> np.ndarray:
+        return self._ydom
+    
+    @ydom.setter
+    def ydom(self, value: np.ndarray):
+        assert value[0] < value[1], "Invalid y domain"
+        self._ydom = value
+        self.update_elements(metric='ydom')
+
+    @property
+    def axes_xpad(self) -> np.ndarray:
+        return self._axes_xpad
+    
+    @axes_xpad.setter
+    def axes_xpad(self, value: np.ndarray):
+        self._axes_xpad = value
+        self.update_elements(metric='xpad')
+
+    @property
+    def axes_ypad(self) -> np.ndarray:
+        return self._axes_ypad
+    
+    @axes_ypad.setter
+    def axes_ypad(self, value: np.ndarray):
+        self._axes_ypad = value
+        self.update_elements(metric='ypad')
+
+    # Derived properties
+    @property
+    def xdom_span(self) -> float:
+        return np.diff(self._xdom)[0]
+    
+    @property
+    def ydom_span(self) -> float:
+        return np.diff(self._ydom)[0]
+    
+    @property
+    def axes_pos(self) -> np.ndarray:
+        """Position of the axis in pygame coordinates on the Canvas surface."""
+        return np.hstack([self._axes_xpad[0], self._axes_ypad[0]]) 
+
+    @property
+    def axes_dim(self) -> np.ndarray:
+        """Dimensions of the axes in pygame coordinates."""
+        return self.dim - np.hstack([self._axes_xpad.sum(), self._axes_ypad.sum()]) 
 
 
 class Axes(Element):
@@ -153,60 +208,25 @@ class Axes(Element):
         Contains a rectangle within parent_canvas containing all plots.
         """
         super().__init__(parent_canvas)
+        self.dim = np.zeros(2)
+        self.update_metrics()
 
-
-
-
-    @property
-    def dim(self):
-
-        return self.canvas.dim - self.canvas.pad[:2] - self.canvas.pad[2:]
-
-
-    def update_dimensions(self, **args):
-        pass
-
-
-    def draw(self):
-
-
-
-        axes_top_left = (self.canvas.dom[0,0], self.canvas.dom[1,1])
-
-
-
-
-        self.pdraw.rect(
-            axes_top_left, self.dim, self.colors["axes_bg"],
-            self.colors["axes_line"], on_axes=True)
-
-
-
-
-
-class Title(Element):
-
-    def __init__(self, parent_canvas, title):
-        """
-        Contains the plot title and title dimensions, centered above axes.
-        """
+        self.dim = np.zeros(2)
         self.pos = np.zeros(2)
-        self.title = title
-        super().__init__(parent_canvas)
 
-    def update_dimensions(self, **args):
-        """
-        Update the title position to a point centered above the axes.
-        """
-        self.pos[0] = self.canvas.pad[0] + self.canvas.axes.dim[0] / 2
-        self.pos[1] = self.canvas.pad[1] / 2
+        self.update_metrics()
 
+    def update_metrics(
+            self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad'] | None=None):
+        if metric == 'pos' or metric is None:
+            self.pos = self.metrics.axes_pos
+        if metric == 'dim' or metric is None:
+            self.dim = self.metrics.axes_dim
+        
     def draw(self):
-        font, color =  self.fonts["title"]
-        self.pdraw.text(
-            self.title, font, color, self.pos, ha="center",
-            va="center", on_axes=False)
-
+        self.pdraw.rect(
+            self.pos, self.dim, facecol=self.colors["axes_bg"],
+            linecol=self.colors["axes_line"], on_axes=False)
 
 
 class Axis(Element):
@@ -221,75 +241,109 @@ class Axis(Element):
     LABELS_TEXT = 1
 
 
-    def __init__(self, parent_canvas, orientation, margin=0.1, length=3):
+    def __init__(self, parent_canvas, orientation: int, **kwargs):
         """
+        Axis element containing ticks and labels.
 
-
-        Parameters
-        ----------
-        parent_canvas : Canvas
-            Canvas to which the axis in linked.
-        margin : float, optional
-            margin between min, max bounds and the first, last ticks,
-            expressed as a ratio of the full domain width. The default is 0.1.
-
+        Args:
+            parent_canvas : Canvas
+                Canvas to which the axis in linked.
+            orientation : int
+                Determines whether X or Y axis.
         """
         super().__init__(parent_canvas)
-        self.margin = margin
-        self.pos_ticks = np.empty((0,2))
-        self.pos_line = np.empty(2)
-        self.labels = None
-        self.length = length
+        self.orientation = orientation          
+        self.tick_margin = kwargs.get("margin", 0.1)
+        self.tick_length = kwargs.get("length", 3) 
 
-        # Orientation: determines whether X or Y axis
-        self.orientation = orientation
+        self.num_ticks = 6
+        self.pos_line = np.zeros((2,2))
+        self.pos_ticks = np.zeros(2)
+        
+        self.labels = None
 
         # Tick mode: either fixed locations or fixed values
         self.tick_mode = None
         self.label_mode = None
 
-        # axis_specific drawing paramaters
-        if self.orientation == Axis.X:
-            self.tick_direction = np.array((0, 1))
-            self.text_va = "bottom"
-            self.text_ha = "center"
-        if self.orientation == Axis.Y:
-            self.tick_direction = np.array((-1, 0))
-            self.text_va = "center"
-            self.text_ha = "right"
+        self.update_metrics()
 
     @property
-    def crossing(self):
-        """
-        Return the coordinates of the other axis at which the axis crosses.
+    def text_va(self) -> str:
+        return 'bottom' if self.orientation == Axis.X else 'center'
+    
+    @property
+    def text_ha(self) -> str:
+        return 'center' if self.orientation == Axis.X else 'right'
 
-        For an X-axis this would generally be at y = 0. However, this is not
-        the case when 0 is not contained in the y-domain. In such cases, the
-        X-axis crosses at either the min or max y value within the domain.
-        """
-        return np.clip(0, *self.canvas.dom[1 - self.orientation])
+    @property
+    def tick_direction(self) -> np.ndarray:
+        return np.array((0, 1)) if self.orientation == Axis.X else np.array((-1, 0))
 
-    def update_dimensions(self, **kwargs):
+    @property
+    def dom(self) -> np.ndarray:
+        """
+        Return the domain of this axis.
+        """
+        return self.canvas.metrics.xdom if self.orientation == Axis.X else self.canvas.metrics.ydom
+    
+    @property
+    def dom_other(self) -> np.ndarray:
+        """
+        Return the domain of the other axis (x if y, y if x).
+        """
+        return self.canvas.metrics.ydom if self.orientation == Axis.X else self.canvas.metrics.xdom
+
+    @property
+    def span(self) -> float:
+        """
+        Return the span of this axis domain.
+        """
+        return np.diff(self.dom)[0]
+
+    @property
+    def crossing(self) -> float:
+        """
+        Return the coordinate of the other axis at which the axis crosses.
+        """
+        # TODO: implement optional crossing at 0 if in domain
+        return self.dom_other[0]
+
+    def update_metrics(
+            self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad'] | None=None):
         """
         Recalculate the ticks locations and axis line.
         """
-        # Create diagonal line
-        pos_line = self.canvas.dom.T.copy()
+
+
+        # Compute this axis line coordinates as [[x1, y1], [x2, y2]]
+        # First compute the diagonal line
+        pos_line = np.transpose(np.vstack([
+            self.canvas.metrics.xdom,
+            self.canvas.metrics.ydom]))
+        
+        
+    
+        # Then set fix the position to either vertical or horizontal    
         pos_line[:,1-self.orientation] = self.crossing
         self.pos_line = pos_line
 
         # Update ticks
         if self.tick_mode == Axis.FIXED_TICK_POSITIONS:
 
-            # Compute diagonal ticks
-            n = kwargs.get("num_ticks", self.pos_ticks.shape[0])
-            span = np.diff(self.canvas.dom, axis=1)[:,0]
-            offset = self.margin * span
-            pos_ticks = np.linspace(
-                *(self.canvas.dom.T + (offset, - offset)), n)
+            # Compute crossing ticks (diagnal for now)
 
-            # Set other axis to either zero or min/max other domain
-            pos_ticks[:,1-self.orientation] = self.crossing
+            # TODO: calculate n based on axis dimensions
+            offset = self.tick_margin * self.span
+
+            start = pos_line[0]
+            start[self.orientation] += offset
+
+            end = pos_line[1]
+            end[self.orientation] -= offset
+
+            pos_ticks = np.linspace(start, end, self.num_ticks)
+
             self.pos_ticks = pos_ticks
 
         elif self.tick_mode == Axis.FIXED_TICK_VALUES:
@@ -327,9 +381,14 @@ class Axis(Element):
 
         Ticks will change their value to keep their relative location.
         """
+
+        # TODO: remove?
         self.tick_mode = Axis.FIXED_TICK_POSITIONS
         self.label_mode = Axis.LABELS_NUMERICAL
-        self.update_dimensions(num_ticks=num_ticks)
+
+        self.num_ticks = num_ticks
+
+        self.update_metrics()
 
     def set_ticks(self, ticks, labels):
         """
@@ -350,12 +409,24 @@ class Axis(Element):
 
     def draw(self):
 
+        if self.orientation == self.X:
+            pass
+            self.pdraw.line(
+                self.pos_line, Color.BLUE3, on_axes=True)
+        else:
+            pass
+            # self.pdraw.line(
+            #     self.pos_line, Color.RED3, on_axes=True)
+        
 
-        self.pdraw.line(
-            self.pos_line, self.colors["axis"], on_axes=True)
 
-        tick_vector = self.tick_direction * self.length
+        # Draw axis line
+        # self.pdraw.line(
+        #     self.pos_line, self.colors["axis"], on_axes=True)
 
+    
+        # Draw ticks
+        tick_vector = self.tick_direction * self.tick_length
         for i, (pos, label) in enumerate(zip(self.pos_ticks, self.labels)):
 
             self.pdraw.vector(
@@ -363,9 +434,94 @@ class Axis(Element):
                 on_axes=True)
 
             font, color =  self.fonts["tick"]
-            offset = self.tick_direction * (2 + self.length)
+            offset = self.tick_direction * (2 + self.tick_length)
             self.pdraw.text(
                 label, font, color, pos, self.text_ha, self.text_va,
                 offset, on_axes=True)
 
 
+class Title(Element):
+
+    def __init__(self, parent_canvas, title):
+        """
+        Contains the plot title and title dimensions, centered above axes.
+        """
+        super().__init__(parent_canvas)
+        self.title = title
+
+        self.update_metrics()
+        
+    def update_metrics(
+            self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad'] | None=None):
+        """
+        Update the title position to a point centered above the axes.
+        """
+        self.pos = np.array([
+            self.metrics.axes_xpad[0] + self.canvas.axes.dim[0] / 2, 
+            self.metrics.axes_ypad[0] / 2])
+
+    def draw(self):
+        font, color =  self.fonts["title"]
+        self.pdraw.text(
+            self.title, font, color, self.pos, ha="center",
+            va="center", on_axes=False)
+
+
+class Legend(Element):
+
+    def __init__(self, parent_canvas):
+        """
+        Legend element for plots.
+        """
+        super().__init__(parent_canvas)
+
+
+class Canvas:
+
+    def __init__(
+            self,
+            pos: tuple[int, int],
+            dim: tuple[int, int],
+            xdom: tuple[float, float], 
+            ydom: tuple[float, float],
+            **kwargs):
+        """
+        Container for all plot elements and single source of truth for dimensions and domains.
+        
+        Args:
+            pos: Canvas position (x, y) in screen coordinates
+            dim: Canvas dimensions (width, height) in pixels
+            xdom: X-axis domain (min, max) in data coordinates
+            ydom: Y-axis domain (min, max) in data coordinates                                            
+        """
+        pygame.init()
+
+        # Initialize metrics manager
+        self.metrics = PlotMetrics(pos, dim, xdom, ydom)
+        self.theme = PlotTheme(**kwargs)
+
+        # Plot draw and element instances to metrics        
+        self.axes = Axes(self)
+        self.title = Title(self, kwargs.get("title", ""))
+        self.axisx = Axis(self, Axis.X)
+        self.axisy = Axis(self, Axis.Y)
+
+        for element in [self.axes, self.title, self.axisx, self.axisy]:
+            self.metrics.add_element(self.axes)
+
+        self.pdraw = PlotDraw(self)
+
+    def draw(self, surface):
+        self.pdraw.clear()
+
+        # Draw the canvas itself
+        self.pdraw.rect(
+            (0,0), self.metrics.dim, self.theme.colors["canvas_bg"],
+            self.theme.colors["canvas_line"], on_axes=False)
+        
+        self.axes.draw()
+        self.title.draw()
+        self.axisx.draw()
+        self.axisy.draw()
+
+        self.pdraw.draw(surface)
