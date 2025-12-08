@@ -9,12 +9,15 @@ from math import pi, cos, sin
 
 # TO DO / THIS COMMIT
 
-
 # PRIORITIZED (interpolation)
 # TODO: interpolate trails between two bot positions
 
 # PRIORITIZED (UI)
 # TODO: UI from json file
+
+# PRIORITIZED (visual)
+# TODO: Random groups get a "glow spike (more brightness)" that quickly fades out
+# TODO: Bots closer to mouse during interaction are brighter
 
 # PRIORITIZED (optimization and refactor)
 # TODO: smaller sensors? (array is already box blurred, so why take another box?)
@@ -22,10 +25,6 @@ from math import pi, cos, sin
 # TODO: test performance for parrallel / non parrallel functions
 # TODO: numba 32 oe 64 bit variables?
 # TODO: Determine what variables should be _internal
-
-# PRIORITIZED (mouse interaction)
-# TODO: Avoid (or atract) mouse (gravity style, push or pull for RMB and LMB)
-# TODO: Bots closer to mouse during interaction are brighter
 
 # PRIORITIZED 
 # TODO: Make sure that zooming out is bounded by the size of the environment
@@ -38,7 +37,8 @@ from math import pi, cos, sin
 # TODO: Flock bird algorithm
 # TODO: 3 pixels long bots for clearer direction
 # TODO: Ant colony optimization
-# TODO: Random groups get a "glow spike (more brightness)" that quickly fades out
+
+
 
 
 
@@ -122,6 +122,8 @@ class Simulation:
         self.randomness = 0.1
         self.angle_nudge = 0.2
         self.avoidance = 0.5
+        self.mouse_range = 100
+        self.mouse_strenght = 2
 
         # Num bots and num bot groups
         self._num_bots = 1
@@ -132,10 +134,15 @@ class Simulation:
         self.bot_pos = np.zeros((0, 2))
         self.bot_angles = np.zeros((0,))
         self.group_trails = np.zeros((0, *self.env_dim))
-        self.group_col = np.zeros((0, 3))           # TODO: is this shape correct?
-        
+        self.group_col = np.zeros((0, 3))
         self.update_bot_counts()
-    
+
+        # Mouse interaction
+        self._mouse_pos = np.zeros(2)
+        self.mouse_hold_right = False
+        self.mouse_hold_left = False
+
+    # Properties set by UI controls
     @property
     def num_bots(self):
         return self._num_bots
@@ -163,6 +170,18 @@ class Simulation:
     def min_num_bots_per_group(self):
         return int(self._num_bots / self._num_bot_groups)
 
+    # Other properties
+    @property
+    def mouse_pos(self):
+        return self._mouse_pos
+    
+    @mouse_pos.setter
+    def mouse_pos(self, val):
+        """
+        Mouse position in the simulation as coordinates on the bot array.
+        """
+        self._mouse_pos = val * np.divide(self.env_dim, self.window_size)
+     
     # Methods called as a result of changes in properties
     def generate_colors(self):
         """
@@ -226,10 +245,8 @@ class Simulation:
         else:
             self.group_col = self.group_col[:self._num_bot_groups]
 
-        
-
     # Simulation methods
-    def update(self):
+    def update(self, enable_mouse_interation: bool=False):
         
         # Read bot sensors and determine direction preference
         for g in self.group_idx:
@@ -258,6 +275,30 @@ class Simulation:
             # Nudge angle to highest sensor value
             group_angle_preference = self.sensor_angles[group_sensor_values.argmax(axis=1)]
             self.bot_angles[group_mask] += self.angle_nudge * group_angle_preference 
+
+        if enable_mouse_interation:
+    
+            # Calculate bot-mouse distance and a linear distance factor (1 = closest)
+            bot_mouse_vec = np.reshape(self.mouse_pos, (1,2)) - self.bot_pos
+            bot_mouse_dis = np.linalg.norm(bot_mouse_vec, axis=1).reshape((-1,1))
+            dist_factor = 1 - np.clip(bot_mouse_dis, 0, self.mouse_range) / self.mouse_range
+
+            # Calculate the vector and angle from each bot to the mouse
+            bot_mouse_vec_unit = bot_mouse_vec / bot_mouse_dis
+            bot_mouse_angle = np.atan2(bot_mouse_vec_unit[:, 1], bot_mouse_vec_unit[:, 0])
+
+            # Compute the smallest delta between current bot angles and the bot-mouse angles
+            bot_mouse_angle_delta = bot_mouse_angle - self.bot_angles
+            bot_mouse_angle_delta = (bot_mouse_angle_delta + pi) % (2 * pi) - pi
+    
+            # Adjust positions and nudge angles
+            if self.mouse_hold_left:
+                self.bot_pos = self.bot_pos + dist_factor * self.mouse_strenght * bot_mouse_vec_unit
+                self.bot_angles = self.bot_angles + 0.1 * dist_factor.flatten() * bot_mouse_angle_delta
+
+            if self.mouse_hold_right:
+                self.bot_pos = self.bot_pos - dist_factor * self.mouse_strenght * bot_mouse_vec_unit
+                self.bot_angles = self.bot_angles - 0.1 * dist_factor.flatten() * bot_mouse_angle_delta
 
         # Randomly adjust bot angles
         self.bot_angles += np.random.uniform(
@@ -313,8 +354,7 @@ class Simulation:
             arr_draw_rgb += trail_col
         
         arr_draw_rgb = np.clip(arr_draw_rgb, 0, 255)
-
-        
+ 
         # Accent bots positions on color array by making them brighter
         bot_x = tuple(self.bot_pos[:,0].flatten().astype(int))
         bot_y = tuple(self.bot_pos[:,1].flatten().astype(int))
@@ -337,10 +377,19 @@ class App(Application):
         self.simulation = simulation
 
     def update(self):
-        self.simulation.update()
+        self.simulation.update(
+            enable_mouse_interation=(not self.container.active))
 
-        if pygame.BUTTON_LEFT in self.key_events['hold']:
-            print(pygame.mouse.get_pos())
+        # Calucate mouse pos adjusted by zoom and pan offset and pass to simulation
+        self.simulation.mouse_pos = self.mouse_pos_draw
+
+        if pygame.BUTTON_RIGHT in self.key_events['hold']:
+            self.simulation.mouse_hold_right = True
+        elif pygame.BUTTON_LEFT in self.key_events['hold']:
+            self.simulation.mouse_hold_left = True
+        else:
+            self.simulation.mouse_hold_right = False
+            self.simulation.mouse_hold_left = False
 
     def draw(self):
         self.simulation.draw(self.screen, self.zoom, self.pan_offset)
@@ -366,7 +415,7 @@ def main():
             simulation,
             'brightness',
             domain=(0, 1),
-            default=0,
+            default=0.1,
             pos=(10, 10),
             width=ui_width,
             height=20,
@@ -375,18 +424,19 @@ def main():
             simulation,
             'bot_accent',
             domain=(0, 1),
-            default=0.15,
+            default=0.8,
             pos=(10, 20),
             width=ui_width,
             height=20,
             theme_name=theme),
+
 
         Slider(
             simulation,
             'blur_factor',
             domain=(0, 0.5),
             default=0.35,
-            pos=(10, 50),
+            pos=(10, 40),
             width=ui_width,
             height=20,
             theme_name=theme),
@@ -395,7 +445,7 @@ def main():
             'decay',
             domain=(0, 0.4),
             default=0.1,
-            pos=(10, 60),
+            pos=(10, 50),
             width=ui_width,
             height=20,
             theme_name=theme),
@@ -405,8 +455,8 @@ def main():
             simulation,
             'num_bots',
             domain=(1, 10000),
-            default=2500,
-            pos=(10, 90),
+            default=20,
+            pos=(10, 70),
             width=ui_width,
             height=20,
             theme_name=theme),
@@ -415,7 +465,7 @@ def main():
             'num_bot_groups',
             domain=(1, 8),
             default=3,
-            pos=(10, 100),
+            pos=(10, 80),
             width=ui_width,
             height=20,
             theme_name=theme),
@@ -429,7 +479,7 @@ def main():
             'bot_speed',
             domain=(0, 3),
             default=1.2,
-            pos=(10, 130),
+            pos=(10, 100),
             width=ui_width,
             height=20,
             theme_name=theme),
@@ -438,7 +488,7 @@ def main():
             'randomness',
             domain=(0, 1),
             default=0.2,
-            pos=(10, 140),
+            pos=(10, 110),
             width=ui_width,
             height=20,
             theme_name=theme),
@@ -447,7 +497,7 @@ def main():
             'angle_nudge',
             domain=(0, 0.3),
             default=0.25,
-            pos=(10, 150),
+            pos=(10, 120),
             width=ui_width,
             height=20,
             theme_name=theme),
@@ -456,12 +506,30 @@ def main():
             'avoidance',
             domain=(0, 1),
             default=0.75,
+            pos=(10, 130),
+            width=ui_width,
+            height=20,
+            theme_name=theme),
+
+        Slider(
+            simulation,
+            'mouse_range',
+            domain=(10, 200),
+            default=100,
+            pos=(10, 150),
+            width=ui_width,
+            height=20,
+            theme_name=theme),
+        Slider(
+            simulation,
+            'mouse_strenght',
+            domain=(0, 5),
+            default=1,
             pos=(10, 160),
             width=ui_width,
             height=20,
             theme_name=theme),
         
-
         Button(
             text='colors',
             func=simulation.generate_colors,

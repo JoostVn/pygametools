@@ -122,6 +122,16 @@ class Application(ABC):
         # Defining screen
         self.screen = pygame.display.set_mode(self.window_size)
 
+    @property
+    def mouse_pos_draw(self):
+        """
+        Position of the mouse adjusted by zoom and pan offset.
+
+        This transformation is required to map the pygame mouse position to
+        the on-screen position of zoomed/offset elements in the application.
+        """
+        return (np.array(pygame.mouse.get_pos()) - self.pan_offset) / self.zoom
+
     def set_theme(self):
         """
         Reloads all theme colors. Used at init or called externally when
@@ -290,6 +300,7 @@ class Container:
         is active simultaniously.
         """
         self.elements = []
+        self.active = False # True if any GUI element is active (button push, slider adjust etc.)
 
 
     def set_gui(self, elements):
@@ -301,11 +312,14 @@ class Container:
         for element in self.elements:
             if element.state in (State.ACTIVE, State.TRIGGERED):
                 element.update(key_events, mouse_pos)
+                self.active = True
                 return
 
         # If no element is active, update all elements
+        self.active = False
         for element in self.elements:
             element.update(key_events, mouse_pos)
+        
 
     def draw(self, screen):
         for element in self.elements:
