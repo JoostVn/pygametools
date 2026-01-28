@@ -10,7 +10,7 @@ from math import pi, cos, sin, ceil
 # TO DO / THIS COMMIT
 
 # PRIORITIZED (interpolation)
-# TODO: interpolate trails between two bot positions
+
 
 # PRIORITIZED (UI)
 # TODO: UI from json file
@@ -112,43 +112,29 @@ def deposit_segments(trail, prev_pos, pos):
 
     for b in range(num_bots):
 
-        # Start and end positions of this bot's movement segment
-        x0 = prev_pos[b, 0]
-        y0 = prev_pos[b, 1]
-        x1 = pos[b, 0]
-        y1 = pos[b, 1]
-
-        # Displacement vector over this timestep
+        # Start/end positions and displacement vector for current bot
+        x0, y0 = prev_pos[b]
+        x1, y1 = pos[b]
         dx = x1 - x0
         dy = y1 - y0
 
         # Number of interpolation steps: One step per grid cell crossed along the dominant axis
-        steps = int(ceil(max(abs(dx), abs(dy))))
+        num_steps = int(ceil(max(abs(dx), abs(dy))))
 
-        # If the bot did not move enough to cross a cell,still deposit at the final position
-        if steps <= 0:
-            ix = int(x1)
-            iy = int(y1)
-            if 0 <= ix < x_max and 0 <= iy < y_max:
-                trail[ix, iy] = 1.0
+        # If the bot did not move enough to cross a cell,  still deposit at the final position
+        if num_steps <= 0:
+            trail[int(x1), int(y1)] = 1.0
             continue
 
         # Per-step (continuous) increment
-        sx = dx / steps
-        sy = dy / steps
+        sx = dx / num_steps
+        sy = dy / num_steps
 
-        # Walk the line segment in small increments and
-        # write each visited grid cell into the trail
+        # Walk the line segment in small increments and write each visited grid cell into the trail
         x = x0
         y = y0
-        for _ in range(steps + 1):
-            ix = int(x)
-            iy = int(y)
-
-            # Bounds check to avoid out-of-range writes
-            if 0 <= ix < x_max and 0 <= iy < y_max:
-                trail[ix, iy] = 1.0
-
+        for _ in range(num_steps + 1):
+            trail[int(x), int(y)] = 1.0
             x += sx
             y += sy
 
@@ -466,9 +452,9 @@ def main():
     theme = 'default_dark'
     ui_width = 60
 
-    window_size = (300,300)
+    window_size = (500,500)
     simulation = Simulation(
-        env_dim=(150, 150),
+        env_dim=(250, 250),
         window_size=window_size)
     simulation.reset_pos()
 
@@ -488,7 +474,7 @@ def main():
             simulation,
             'bot_accent',
             domain=(0, 1),
-            default=0,
+            default=0.2,
             pos=(10, 20),
             width=ui_width,
             height=20,
@@ -499,7 +485,7 @@ def main():
             simulation,
             'blur_factor',
             domain=(0, 0.5),
-            default=0.05,
+            default=0.25,
             pos=(10, 40),
             width=ui_width,
             height=20,
@@ -508,7 +494,7 @@ def main():
             simulation,
             'decay',
             domain=(0, 0.4),
-            default=0.05,
+            default=0.2,
             pos=(10, 50),
             width=ui_width,
             height=20,
@@ -519,7 +505,7 @@ def main():
             simulation,
             'num_bots',
             domain=(1, 10000),
-            default=1,
+            default=10,
             pos=(10, 70),
             width=ui_width,
             height=20,
@@ -541,8 +527,8 @@ def main():
         Slider(
             simulation,
             'bot_speed',
-            domain=(0, 5),
-            default=5,
+            domain=(0, 3),
+            default=2,
             pos=(10, 100),
             width=ui_width,
             height=20,
@@ -559,8 +545,8 @@ def main():
         Slider(
             simulation,
             'angle_nudge',
-            domain=(0, 0.3),
-            default=0.0,
+            domain=(0, 1),
+            default=0.3,
             pos=(10, 120),
             width=ui_width,
             height=20,
