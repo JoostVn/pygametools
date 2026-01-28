@@ -7,39 +7,15 @@ from numba import jit, float64, int32, int64, boolean, prange
 from math import pi, cos, sin, ceil
 
 
-# TO DO / THIS COMMIT
-
-# PRIORITIZED (interpolation)
-
-
 # PRIORITIZED (UI)
 # TODO: UI from json file
 
-# PRIORITIZED (visual)
-# TODO: Random groups get a "glow spike (more brightness)" that quickly fades out
-# TODO: Bots closer to mouse during interaction are brighter
-
-# PRIORITIZED (optimization and refactor)
-# TODO: smaller sensors? (array is already box blurred, so why take another box?)
-# TODO: optimize!
-# TODO: test performance for parrallel / non parrallel functions
-# TODO: numba 32 oe 64 bit variables?
-# TODO: Determine what variables should be _internal
-
-# PRIORITIZED 
-# TODO: Make sure that zooming out is bounded by the size of the environment
-
 # UNPRIORITIZED
 # TODO: maybe use taichi instead of numba for optimization?
-# TODO: Refactor - move bot vars to BotSwarm class, all pos/angle etc. methods to functions
 
 # IDEAS
 # TODO: Flock bird algorithm
-# TODO: 3 pixels long bots for clearer direction
 # TODO: Ant colony optimization
-
-
-
 
 
 @jit(float64[:,:](float64[:,:], int64, int64, float64), nopython=True)
