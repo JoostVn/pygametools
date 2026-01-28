@@ -4,7 +4,7 @@ from pygametools.gui.base import Application
 from pygametools.gui.elements import Button, Slider, Label
 import numpy as np
 from numba import jit, float64, int32, int64, boolean, prange
-from math import pi, cos, sin
+from math import pi, cos, sin, ceil
 
 
 # TO DO / THIS COMMIT
@@ -84,7 +84,7 @@ def read_sensor(trail, pos, angle, sensor_reach, sensor_size, sensor_angle):
 
 
 @jit(float64[:](float64[:,:], float64[:,:], float64[:], float64, float64, float64),
-     nopython=True)
+     nopython=True, parallel=True)
 def read_all_sensors(trail, bot_pos, bot_angles, sensor_reach, sensor_size, sensor_angle):
     """
     Calculate a sensor value for each bot in bot_pos and bot_angles.
@@ -97,6 +97,45 @@ def read_all_sensors(trail, bot_pos, bot_angles, sensor_reach, sensor_size, sens
     
     return sensor_values
 
+
+@jit(nopython=True)
+def deposit_segments(trail, prev_pos, pos):
+    """
+    For each bot: rasterize line from prev_pos[b] -> pos[b] into `trail`.
+    trail is 2D float array. prev_pos, pos are (N,2) float arrays in env coordinates.
+    """
+    h, w = trail.shape  # NOTE: your indexing uses [x,y], so treat shape accordingly
+    n = pos.shape[0]
+
+    for b in range(n):
+        x0 = prev_pos[b, 0]
+        y0 = prev_pos[b, 1]
+        x1 = pos[b, 0]
+        y1 = pos[b, 1]
+
+        dx = x1 - x0
+        dy = y1 - y0
+
+        steps = int(ceil(max(abs(dx), abs(dy))))
+        if steps <= 0:
+            ix = int(x1)
+            iy = int(y1)
+            if 0 <= ix < h and 0 <= iy < w:
+                trail[ix, iy] = 1.0
+            continue
+
+        sx = dx / steps
+        sy = dy / steps
+
+        x = x0
+        y = y0
+        for _ in range(steps + 1):
+            ix = int(x)
+            iy = int(y)
+            if 0 <= ix < h and 0 <= iy < w:
+                trail[ix, iy] = 1.0
+            x += sx
+            y += sy
 
 
 class Simulation:
@@ -132,6 +171,7 @@ class Simulation:
         # Bot/group variable based on num bots/groups
         self.bot_membership = np.zeros((0,))
         self.bot_pos = np.zeros((0, 2))
+        self.bot_prev_pos = np.zeros((0, 2))
         self.bot_angles = np.zeros((0,))
         self.group_trails = np.zeros((0, *self.env_dim))
         self.group_col = np.zeros((0, 3))
@@ -217,12 +257,16 @@ class Simulation:
         delta_num_groups = self._num_bot_groups - self.group_trails.shape[0]
         delta_num_bots = self._num_bots - self.bot_pos.shape[0]
 
-        # Update pos
+        # Update pos and prev pos
         if delta_num_bots > 0:
             new_pos = np.random.uniform((0,0), self.env_dim, (delta_num_bots, 2))
             self.bot_pos = np.vstack((self.bot_pos, new_pos))
+
+            new_prev = new_pos.copy()
+            self.bot_prev_pos = np.vstack((self.bot_prev_pos, new_prev))
         else:
             self.bot_pos = self.bot_pos[:self._num_bots]
+            self.bot_prev_pos = self.bot_prev_pos[:self._num_bots]
 
         # Update angles
         if delta_num_bots > 0:
@@ -247,6 +291,9 @@ class Simulation:
 
     # Simulation methods
     def update(self, enable_mouse_interation: bool=False):
+
+        # Save previous bot positions
+        self.bot_prev_pos[:] = self.bot_pos
         
         # Read bot sensors and determine direction preference
         for g in self.group_idx:
@@ -276,6 +323,8 @@ class Simulation:
             group_angle_preference = self.sensor_angles[group_sensor_values.argmax(axis=1)]
             self.bot_angles[group_mask] += self.angle_nudge * group_angle_preference 
 
+
+        # Interaction with mouse (pull/push bots from the current mouse pos)
         if enable_mouse_interation:
     
             # Calculate bot-mouse distance and a linear distance factor (1 = closest)
@@ -288,8 +337,7 @@ class Simulation:
             bot_mouse_angle = np.atan2(bot_mouse_vec_unit[:, 1], bot_mouse_vec_unit[:, 0])
 
             # Compute the smallest delta between current bot angles and the bot-mouse angles
-            bot_mouse_angle_delta = bot_mouse_angle - self.bot_angles
-            bot_mouse_angle_delta = (bot_mouse_angle_delta + pi) % (2 * pi) - pi
+            bot_mouse_angle_delta = (bot_mouse_angle - self.bot_angles + pi) % (2 * pi) - pi
     
             # Adjust positions and nudge angles
             if self.mouse_hold_left:
@@ -333,9 +381,10 @@ class Simulation:
         self.bot_angles = self.bot_angles % (2 * pi)
 
         # Update the trails of each group with the new positions of its bot members
+        # Also deposit trails for interpolated cells between prev pos and current pos 
         for g in self.group_idx:
-            bot_int_pos = self.bot_pos[self.bot_membership==g].astype(int).T
-            self.group_trails[g, *bot_int_pos] = 1
+            mask = self.bot_membership == g
+            deposit_segments(self.group_trails[g], self.bot_prev_pos[mask], self.bot_pos[mask])
 
         # Blur and apply decay to the trails of each group
         for g in self.group_idx:
@@ -402,9 +451,9 @@ def main():
     theme = 'default_dark'
     ui_width = 60
 
-    window_size = (500,500)
+    window_size = (300,300)
     simulation = Simulation(
-        env_dim=(250, 250),
+        env_dim=(150, 150),
         window_size=window_size)
     simulation.reset_pos()
 
@@ -415,7 +464,7 @@ def main():
             simulation,
             'brightness',
             domain=(0, 1),
-            default=0.1,
+            default=0.5,
             pos=(10, 10),
             width=ui_width,
             height=20,
@@ -424,7 +473,7 @@ def main():
             simulation,
             'bot_accent',
             domain=(0, 1),
-            default=0.8,
+            default=0,
             pos=(10, 20),
             width=ui_width,
             height=20,
@@ -435,7 +484,7 @@ def main():
             simulation,
             'blur_factor',
             domain=(0, 0.5),
-            default=0.35,
+            default=0.05,
             pos=(10, 40),
             width=ui_width,
             height=20,
@@ -444,7 +493,7 @@ def main():
             simulation,
             'decay',
             domain=(0, 0.4),
-            default=0.1,
+            default=0.05,
             pos=(10, 50),
             width=ui_width,
             height=20,
@@ -455,7 +504,7 @@ def main():
             simulation,
             'num_bots',
             domain=(1, 10000),
-            default=20,
+            default=1,
             pos=(10, 70),
             width=ui_width,
             height=20,
@@ -477,8 +526,8 @@ def main():
         Slider(
             simulation,
             'bot_speed',
-            domain=(0, 3),
-            default=1.2,
+            domain=(0, 5),
+            default=5,
             pos=(10, 100),
             width=ui_width,
             height=20,
@@ -496,7 +545,7 @@ def main():
             simulation,
             'angle_nudge',
             domain=(0, 0.3),
-            default=0.25,
+            default=0.0,
             pos=(10, 120),
             width=ui_width,
             height=20,
