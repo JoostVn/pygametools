@@ -7,17 +7,6 @@ from numba import jit, float64, int32, int64, boolean, prange
 from math import pi, cos, sin, ceil
 
 
-# PRIORITIZED (UI)
-# TODO: UI from json file
-
-# UNPRIORITIZED
-# TODO: maybe use taichi instead of numba for optimization?
-
-# IDEAS
-# TODO: Flock bird algorithm
-# TODO: Ant colony optimization
-
-
 @jit(float64[:,:](float64[:,:], int64, int64, float64), nopython=True)
 def get_subarray(arr, i, j, span):
     """

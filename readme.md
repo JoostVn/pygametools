@@ -3,34 +3,33 @@
 Plotting, gui and colors for the Pygame module.
 
 ## Installation
+```bash
+>> py -m venv .venv
+>> .venv/scripts/activate
+>> pip install -r .\requirements.txt
+>> pip install -e .
+```
 
-`pip install -e .`
+## Todo and ideas
 
-## General
-
-### TODO / General
-
-- Git repo
-- Host on Github
-- Unit tests
-
-## Gui
-
-### TODO / Gui
+### Gui
 
 - Add sliders to ghui_example1
 - Add checkbox to theme creator
 - Add theme creator to main package
+- UI from json file
 
-## Plotting
-
-### TODO / plotting
+### plotting
 
 - Rename to plot
 - Make list of requirements
-
-### Requirements / plotting
-
 - Zoom without using scipy
 - Option to make plots inactive to save resources
 - Canvas -> ax structure
+
+### Applications and examples
+- Standard sim package
+- Experiment with Taichi instead of numba for optimization
+- Flock bird algorithm
+- Ant colony optimization
+
