@@ -101,39 +101,54 @@ def read_all_sensors(trail, bot_pos, bot_angles, sensor_reach, sensor_size, sens
 @jit(nopython=True)
 def deposit_segments(trail, prev_pos, pos):
     """
-    For each bot: rasterize line from prev_pos[b] -> pos[b] into `trail`.
-    trail is 2D float array. prev_pos, pos are (N,2) float arrays in env coordinates.
-    """
-    h, w = trail.shape  # NOTE: your indexing uses [x,y], so treat shape accordingly
-    n = pos.shape[0]
+    Rasterize straight-line motion between consecutive bot positions.
 
-    for b in range(n):
+    For each bot, interpolate between its previous position and its current
+    position and write all intermediate grid cells into the trail array.
+    This prevents gaps when bot speed > 1 grid cell per update.
+    """
+    x_max, y_max = trail.shape
+    num_bots = pos.shape[0]
+
+    for b in range(num_bots):
+
+        # Start and end positions of this bot's movement segment
         x0 = prev_pos[b, 0]
         y0 = prev_pos[b, 1]
         x1 = pos[b, 0]
         y1 = pos[b, 1]
 
+        # Displacement vector over this timestep
         dx = x1 - x0
         dy = y1 - y0
 
+        # Number of interpolation steps: One step per grid cell crossed along the dominant axis
         steps = int(ceil(max(abs(dx), abs(dy))))
+
+        # If the bot did not move enough to cross a cell,still deposit at the final position
         if steps <= 0:
             ix = int(x1)
             iy = int(y1)
-            if 0 <= ix < h and 0 <= iy < w:
+            if 0 <= ix < x_max and 0 <= iy < y_max:
                 trail[ix, iy] = 1.0
             continue
 
+        # Per-step (continuous) increment
         sx = dx / steps
         sy = dy / steps
 
+        # Walk the line segment in small increments and
+        # write each visited grid cell into the trail
         x = x0
         y = y0
         for _ in range(steps + 1):
             ix = int(x)
             iy = int(y)
-            if 0 <= ix < h and 0 <= iy < w:
+
+            # Bounds check to avoid out-of-range writes
+            if 0 <= ix < x_max and 0 <= iy < y_max:
                 trail[ix, iy] = 1.0
+
             x += sx
             y += sy
 
