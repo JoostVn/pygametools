@@ -123,14 +123,15 @@ class Application(ABC):
         self.screen = pygame.display.set_mode(self.window_size)
 
     @property
-    def mouse_pos_draw(self):
+    def mouse_pos_draw(self) -> tuple[int, int]:
         """
         Position of the mouse adjusted by zoom and pan offset.
 
         This transformation is required to map the pygame mouse position to
         the on-screen position of zoomed/offset elements in the application.
         """
-        return (np.array(pygame.mouse.get_pos()) - self.pan_offset) / self.zoom
+        mouse_pos_arr = np.array(pygame.mouse.get_pos())
+        return tuple(((mouse_pos_arr - self.pan_offset) / self.zoom).astype(int))
 
     def set_theme(self):
         """
