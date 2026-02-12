@@ -68,7 +68,7 @@ class TestApp(Application):
     
     def update(self):
 
-        if self.container.active:
+        if self.container.is_active:
             self.simulation.update(mouse_pos=self.mouse_pos_draw)
         elif pygame.BUTTON_RIGHT in self.key_events['down']:
             self.simulation.update(mouse_pos=self.mouse_pos_draw, click_right=True)

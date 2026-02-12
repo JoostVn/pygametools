@@ -84,22 +84,9 @@ class Application(ABC):
         pygame.init()
         pygame.display.set_caption(name)
 
-
-
-        ## NEW
         icon_path = files("pygametools.gui.icons").joinpath(f"icon.png")
         with icon_path.open() as file:
             pygame.display.set_icon(pygame.image.load(file))
-        ## NEW
-
-
-        # icon_path = pkg_resources.resource_filename(
-        #     'gui', 'resources/icon.png')
-        # with open(icon_path, 'r') as file:
-        #     pygame.display.set_icon(pygame.image.load(file))
-
-
-
 
 
         # Class main settings
@@ -192,10 +179,9 @@ class Application(ABC):
                 if event.type == pygame.QUIT:
                     running = False
 
-            # GUI and program updates
+            # GUI updates
             self._update_key_events(events)
             self.container.update(self.key_events, pygame.mouse.get_pos())
-            self.update()
 
             # Zooming and panning
             if pygame.BUTTON_WHEELUP in self.key_events['down']:
@@ -204,6 +190,9 @@ class Application(ABC):
                 self.change_zoom(scaler=0.8)
             elif pygame.BUTTON_MIDDLE in self.key_events['down']:
                 self.mouse_pan()
+
+            # Application update
+            self.update()
 
             # Draw everything to screen
             self.call_draw()
@@ -301,8 +290,7 @@ class Container:
         is active simultaniously.
         """
         self.elements = []
-        self.active = False # True if any GUI element is active (button push, slider adjust etc.)
-
+        self.is_active = False # True if any GUI element is active (button push, slider adjust etc.)
 
     def set_gui(self, elements):
         self.elements = elements
@@ -313,13 +301,16 @@ class Container:
         for element in self.elements:
             if element.state in (State.ACTIVE, State.TRIGGERED):
                 element.update(key_events, mouse_pos)
-                self.active = True
                 return
 
         # If no element is active, update all elements
-        self.active = False
+        self.is_active = False
         for element in self.elements:
             element.update(key_events, mouse_pos)
+
+            # Set container state to active to notify implemented applications
+            if element.state in (State.ACTIVE, State.TRIGGERED):
+                self.is_active = True
         
 
     def draw(self, screen):

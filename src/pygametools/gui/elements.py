@@ -41,6 +41,9 @@ class Element(ABC):
         self.state = State.PASSIVE
         self.set_theme()
 
+    def __repr__(self):
+        return f'{self.__class__.__name__}|{self.state}'
+
     def _inscope_mouse(self, mouse_pos):
         """
         Return True if the given mouse position (x,y) sits within the margins
@@ -62,7 +65,7 @@ class Element(ABC):
             mouse_pos[1] > self._box[2],
             mouse_pos[1] < self._box[3]])
         return in_scope
-    
+
     @abstractmethod
     def set_theme(self):
         """

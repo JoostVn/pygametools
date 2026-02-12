@@ -393,7 +393,7 @@ class App(Application):
 
     def update(self):
         self.simulation.update(
-            enable_mouse_interation=(not self.container.active))
+            enable_mouse_interation=(not self.container.is_active))
 
         # Calucate mouse pos adjusted by zoom and pan offset and pass to simulation
         self.simulation.mouse_pos = self.mouse_pos_draw
