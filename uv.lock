@@ -751,10 +751,10 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ipykernel", specifier = "==6.29.5" },
-    { name = "matplotlib", specifier = "==3.9.3" },
+    { name = "ipykernel", specifier = ">=6.29.5" },
+    { name = "matplotlib", specifier = ">=3.9.3" },
     { name = "numba", specifier = ">=0.64.0" },
-    { name = "numpy", specifier = "==2.0.2" },
+    { name = "numpy", specifier = ">=2.0.2" },
     { name = "pygame", specifier = "==2.6.1" },
 ]
 
