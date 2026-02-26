@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pygametools"
+version = "0.1.0"
+description = "Tools for using Pygame such as plotting and GUI."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "ipykernel==6.29.5",
+    "matplotlib==3.9.3",
+    "numba>=0.64.0",
+    "numpy==2.0.2",
+    "pygame==2.6.1",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
