@@ -8,8 +8,8 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 - Plotting the accuracy of a neural network as it is optimized over different iterations.
 
 ## TODO
-1. Go through files and fill the lists of requirements.
-2. Let Claude rewrite and clean up / error-check the design file a bit. (Also: dots after sentences, grammar, marking references to code/objects/attributes with ``, sentence structure, etc.)
+1. ✅ Go through files and fill the lists of requirements.
+2. ✅ Let Claude rewrite and clean up / error-check the design file a bit. (Also: dots after sentences, grammar, marking references to code/objects/attributes with ``, sentence structure, etc.)
 3. Let Claude add additional design choices that have to be made.
 4. Further fill in the list and let Claude add additional design requirements or functional suggestions.
 5. Make an ASCII figure of the `Canvas` class and all possible elements such as `Axes` and `Axis`.
