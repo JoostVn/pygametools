@@ -19,6 +19,8 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 
 ## Objects and Terminology
 
+### Overview
+
 The `plots` module, for the most part, follows Matplotlib terminology. Objects are named as follows.
 
 - `Canvas`: Contains all other elements (Matplotlib: `Figure`).
@@ -36,11 +38,7 @@ The `plots` module, for the most part, follows Matplotlib terminology. Objects a
 - `LinePlot` / `ScatterPlot` / `BarPlot` / `ArrayPlot`: Concrete plot-data elements that live inside `Axes`.
 
 
-**Metrics:**
 
-- `pos`: The `(X, Y)` position of the `Canvas` on the top-level Pygame screen, in Pygame coordinates.
-- `dim`: The `(X, Y)` dimensions of the `Canvas` in Pygame coordinates.
-- `xdom` / `ydom`: The domain of a plot along each axis, in plot coordinates.
 
 > TODO: How to handle element dimensions?
 
@@ -49,14 +47,57 @@ The `plots` module, for the most part, follows Matplotlib terminology. Objects a
 Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordinates.
 
 
-## Functional Requirements
-
-
-### Plot Elements and the Canvas Object
+### Canvas
 
 - A plot is a collection of elements contained within a `Canvas` object.
 - Any type of plot can be added to a `Canvas` object, so it may contain different plot types such as line plots and scatter plots.
 - The `Canvas` object contains a Pygame surface on which all other elements are drawn.
+
+
+### Axes
+
+- A `Canvas` always contains a single `axes` object.
+
+
+### Axis Lines and Ticks
+
+- An `Axis` supports two tick modes:
+    - Fixed positions: evenly spaced ticks whose displayed values update when the domain changes.
+    - Fixed values: ticks at specified data values whose pixel positions update when the domain changes.
+- Tick labels are either numerical (auto-formatted based on magnitude) or user-supplied strings.
+- Ticks and tick labels are drawn on the Canvas surface at the edges of the Axes.
+
+
+
+### Axis Labels
+
+- Each `Axis` is optionally labeled with an `axis_label`: a single descriptive text label (e.g., "Time (s)").
+- The X-axis label is centered below the tick labels; the Y-axis label is rotated 90° and placed to the left.
+
+### Title
+
+- Centered above the `axes`.
+
+### Legend
+
+- The `Legend` element auto-populates from plot objects registered with the `Axes`.
+- Each plot element provides a color swatch and a name string to the legend.
+- The legend can be positioned at a fixed corner of the `Axes`, or hidden.
+
+
+### Grid
+
+- `Grid` is an optional element that extends tick positions as horizontal/vertical lines across the `Axes`.
+- Grid lines are drawn before plot data so they appear behind the data.
+- Grid visibility and style (color, line width) are configurable via `PlotTheme`.
+
+
+
+
+
+
+
+## Functional Requirements
 
 
 ### Dynamic Plotting
@@ -78,6 +119,13 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 - Each `Element` receives the name of the changed metric, allowing it to skip recomputation for unrelated metrics.
 
 > TODO: Is this the most logical way to handle updates? Should `PlotMetrics` be responsible for update calls to other elements?
+
+#### List of metrics
+
+- `pos`: The `(X, Y)` position of the `Canvas` on the top-level Pygame screen, in Pygame coordinates.
+- `dim`: The `(X, Y)` dimensions of the `Canvas` in Pygame coordinates.
+- `xdom` / `ydom`: The domain of a plot along each axis, in plot coordinates.
+
 
 ### Theming
 
@@ -102,39 +150,6 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 - Dynamic plots only need to be updated when their data changes. Otherwise, the `Canvas` surface is redrawn as it was in the previous tick.
 
 
-### Axes
-
-- A `Canvas` always contains a single `axes` object.
-
-
-### Axis Lines and Ticks
-
-- An `Axis` supports two tick modes:
-    - Fixed positions: evenly spaced ticks whose displayed values update when the domain changes.
-    - Fixed values: ticks at specified data values whose pixel positions update when the domain changes.
-- Tick labels are either numerical (auto-formatted based on magnitude) or user-supplied strings.
-- Ticks and tick labels are drawn on the Canvas surface at the edges of the Axes.
-
-
-
-### Axis Labels
-
-- Each `Axis` optionally displays a single descriptive text label (e.g., "Time (s)").
-- The X-axis label is centered below the tick labels; the Y-axis label is rotated 90° and placed to the left.
-
-
-### Legend
-
-- The `Legend` element auto-populates from plot objects registered with the `Axes`.
-- Each plot element provides a color swatch and a name string to the legend.
-- The legend can be positioned at a fixed corner of the `Axes`, or hidden.
-
-
-### Grid
-
-- `Grid` is an optional element that extends tick positions as horizontal/vertical lines across the `Axes`.
-- Grid lines are drawn before plot data so they appear behind the data.
-- Grid visibility and style (color, line width) are configurable via `PlotTheme`.
 
 
 ### Public Data API
