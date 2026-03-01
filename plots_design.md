@@ -25,7 +25,7 @@ The `plots` module, for the most part, follows Matplotlib terminology. Objects a
 
 - `Canvas`: Contains all other elements (Matplotlib: `Figure`).
 - `Axes`: Area within a `Canvas` that contains the actual plots.
-- `Axis`: The X- and Y-axis of a plot; the horizontal/vertical lines that meet at `(0, 0)`.
+- `Axis`: The X- and Y-axis of a plot. The X-axis runs along the bottom border of `Axes`; the Y-axis runs along the left border.
 - `Ticks`: Small lines that cross an axis to indicate scale and spacing.
 - `Tick labels`: Numbers or string labels to the left of (Y) or below (X) the axes.
 - `Axis labels`: Single labels for the X- and Y-axis.
@@ -51,21 +51,23 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 
 - A plot is a collection of elements contained within a `Canvas` object.
 - Any type of plot can be added to a `Canvas` object, so it may contain different plot types such as line plots and scatter plots.
-- The `Canvas` object contains a Pygame surface on which all other elements are drawn.
+- The `Canvas` object owns two Pygame surfaces: `surface_canvas` for all chrome elements (axes border, ticks, tick labels, axis labels, title, legend), and `surface_axes` for plot data.
 
 
 ### Axes
 
-- A `Canvas` always contains a single `axes` object.
+- A `Canvas` always contains a single `Axes` object.
+- Plot data is drawn onto `surface_axes`. Because plot data is drawn on a separate surface, out-of-bounds data is clipped automatically without any per-point bounds checking.
 
 
 ### Axis Lines and Ticks
 
+- The X-axis line runs along the bottom border of `Axes`; the Y-axis line runs along the left border. Axis lines do not move with the domain.
 - An `Axis` supports two tick modes:
     - Fixed positions: evenly spaced ticks whose displayed values update when the domain changes.
     - Fixed values: ticks at specified data values whose pixel positions update when the domain changes.
 - Tick labels are either numerical (auto-formatted based on magnitude) or user-supplied strings.
-- Ticks and tick labels are drawn on the Canvas surface at the edges of the Axes.
+- Ticks and tick labels are drawn on `surface_canvas`, positioned relative to the edges of `Axes`. Tick pixel positions are computed directly from `axes_pos`, `axes_dim`, and the domain — no graph-to-canvas coordinate conversion is needed.
 
 
 
@@ -135,19 +137,19 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 
 ### Drawing
 
-- Only one class or module is responsible for drawing anything to the Pygame screen.
+- Only `PlotDraw` is responsible for drawing anything to the Pygame screen.
+- `PlotDraw` owns `surface_canvas` and `surface_axes`. On each frame, `surface_axes` is blitted onto `surface_canvas` at `axes_pos`, and `surface_canvas` is then blitted onto the top-level Pygame screen at `pos`.
 - Drawing is done in two different coordinate systems:
-    - Pygame coordinates: Regular Pygame coordinates, relative to the `Canvas` (except for the `pos` of `Canvas` itself, which is relative to the top-level screen).
-    - Graph coordinates: Coordinates relative to the X/Y domains of the `Axes` object. Drawing something to `(0, 0)` in graph coordinates will always draw to the origin of the plot.
-- In this class/module, Pygame drawing functions such as `pygame.draw.rect()` are wrapped to make switching between Pygame and graph coordinates straightforward.
+    - Canvas coordinates: Pygame coordinates relative to the top-left of `surface_canvas`.
+    - Graph coordinates: Coordinates relative to the X/Y domains of `Axes`. Used only when drawing plot data onto `surface_axes`.
+- `PlotDraw` wraps Pygame drawing functions to accept either coordinate system and route to the correct surface.
 
 
 ### Adding Data to Plots
 
 - When data is added to a plot, it is stored within that plot object.
-- Only when a plot is drawn are datapoints checked against the plot bounds.
-- Once a point is checked, it should not be checked again unless the metrics of the plot change.
-- Dynamic plots only need to be updated when their data changes. Otherwise, the `Canvas` surface is redrawn as it was in the previous tick.
+- Out-of-bounds data is clipped automatically by `surface_axes`; no per-point bounds checking is required.
+- Dynamic plots only need to be updated when their data or metrics change. Otherwise, `surface_canvas` is reblitted as it was in the previous tick.
 
 
 
@@ -174,8 +176,6 @@ The following plot types will be supported:
 - How to handle the dimensions and locations of elements within the canvas? For example, where should the axes coordinates live? If they are a property of the `Axes` instance, how will the `Title` be able to center itself above it?
 - How to handle the different coordinate systems (Pygame / plot)?
 - Where should plot metrics live? How to handle the fact that any metric could be changed at any time and that all elements should adjust accordingly?
-- **Single surface vs. separate axes surface**: Should `PlotDraw` maintain a separate `surface_axes` (automatically clipping plots to the `Axes` rectangle) or draw everything on `surface_canvas` with manual bounds checks? This decision directly affects how out-of-bounds data is handled.
-    - Pro of axes surface: out of bounds data doesn't need to be checked. BUT ticks are weird: do we draw them on the Canvas surface or the axes surface? If they are drawn on the Canvas surface, do they use graph coordinates? How can we use that?
-    - Pro of one canvas surface: Ticks and the coordinate systems are easier.
+- ✅ **Single surface vs. separate axes surface**: Two surfaces are used — `surface_axes` for plot data and `surface_canvas` for everything else. Ticks and tick labels are drawn on `surface_canvas`, so they are never clipped. Plot data on `surface_axes` is clipped automatically.
 - **Observer pattern scope**: `PlotMetrics` currently notifies all elements. Should plot-data elements (`LinePlot`, etc.) also register directly with `PlotMetrics`, or should `Axes` be responsible for propagating metric changes to its child plots?
 - **Coordinate input types**: Should `PlotDraw` accept plain tuples, lists, and numpy arrays interchangeably, or enforce a single type for performance?
