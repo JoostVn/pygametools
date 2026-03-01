@@ -33,7 +33,7 @@ The `plots` module, for the most part, follows Matplotlib terminology. Objects a
 - `Legend`: A legend that optionally contains the color and name of elements in the plot.
 - `Grid`: A grid that extends from ticks across the plot area.
 - `PlotTheme`: Holds color and font configuration for all elements.
-- `PlotDraw`: The single drawing layer responsible for coordinate conversion and all Pygame drawing calls.
+- `PlotRenderer`: Owns the two Pygame surfaces and is the single drawing layer responsible for coordinate conversion and all Pygame drawing calls.
 - `Element`: Abstract base class for all drawable plot elements (`Axes`, `Axis`, `Title`, `Legend`, …).
 - `LinePlot` / `ScatterPlot` / `BarPlot` / `ArrayPlot`: Concrete plot-data elements that live inside `Axes`.
 
@@ -51,7 +51,7 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 
 - A plot is a collection of elements contained within a `Canvas` object.
 - Any type of plot can be added to a `Canvas` object, so it may contain different plot types such as line plots and scatter plots.
-- The `Canvas` object owns two Pygame surfaces: `surface_canvas` for all chrome elements (axes border, ticks, tick labels, axis labels, title, legend), and `surface_axes` for plot data.
+- The `Canvas` object holds a `PlotRenderer` instance, which owns the two Pygame surfaces: `surface_canvas` for all chrome elements (axes border, ticks, tick labels, axis labels, title, legend), and `surface_axes` for plot data.
 
 
 ### Axes
@@ -120,7 +120,6 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 - When any metric changes, `PlotMetrics` notifies all registered `Element` instances so they can recompute their layout.
 - Each `Element` receives the name of the changed metric, allowing it to skip recomputation for unrelated metrics.
 
-> TODO: Is this the most logical way to handle updates? Should `PlotMetrics` be responsible for update calls to other elements?
 
 #### List of metrics
 
@@ -133,16 +132,14 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 
 - All colors and fonts are defined in a `PlotTheme` object attached to the `Canvas`.
 
-> TODO: Should elements be aware of their parent canvas?
-
 ### Drawing
 
-- Only `PlotDraw` is responsible for drawing anything to the Pygame screen.
-- `PlotDraw` owns `surface_canvas` and `surface_axes`. On each frame, `surface_axes` is blitted onto `surface_canvas` at `axes_pos`, and `surface_canvas` is then blitted onto the top-level Pygame screen at `pos`.
+- Only `PlotRenderer` is responsible for drawing anything to the Pygame screen.
+- `PlotRenderer` owns `surface_canvas` and `surface_axes`. On each frame, `surface_axes` is blitted onto `surface_canvas` at `axes_pos`, and `surface_canvas` is then blitted onto the top-level Pygame screen at `pos`.
 - Drawing is done in two different coordinate systems:
     - Canvas coordinates: Pygame coordinates relative to the top-left of `surface_canvas`.
     - Graph coordinates: Coordinates relative to the X/Y domains of `Axes`. Used only when drawing plot data onto `surface_axes`.
-- `PlotDraw` wraps Pygame drawing functions to accept either coordinate system and route to the correct surface.
+- `PlotRenderer` wraps Pygame drawing functions to accept either coordinate system and route to the correct surface.
 
 
 ### Adding Data to Plots
@@ -173,9 +170,12 @@ The following plot types will be supported:
 
 ## Questions / Design Choices
 
-- How to handle the dimensions and locations of elements within the canvas? For example, where should the axes coordinates live? If they are a property of the `Axes` instance, how will the `Title` be able to center itself above it?
+
+- Should `PlotMetrics` be responsible for update calls to other elements?
+- How to handle the dimensions and locations of elements within the canvas? For example, where should the axes pos live? If they are a property of the `Axes` instance, how will the `Title` be able to center itself above it?
 - How to handle the different coordinate systems (Pygame / plot)?
 - Where should plot metrics live? How to handle the fact that any metric could be changed at any time and that all elements should adjust accordingly?
 - ✅ **Single surface vs. separate axes surface**: Two surfaces are used — `surface_axes` for plot data and `surface_canvas` for everything else. Ticks and tick labels are drawn on `surface_canvas`, so they are never clipped. Plot data on `surface_axes` is clipped automatically.
 - **Observer pattern scope**: `PlotMetrics` currently notifies all elements. Should plot-data elements (`LinePlot`, etc.) also register directly with `PlotMetrics`, or should `Axes` be responsible for propagating metric changes to its child plots?
-- **Coordinate input types**: Should `PlotDraw` accept plain tuples, lists, and numpy arrays interchangeably, or enforce a single type for performance?
+- **Coordinate input types**: Should `PlotRenderer` accept plain tuples, lists, and numpy arrays interchangeably, or enforce a single type for performance?
+- Should elements be aware of their parent canvas? Or should the parent canvas just call a draw method for all plot it's holding and pass the `PlotRenderer` object?
