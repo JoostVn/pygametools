@@ -94,7 +94,7 @@ class PlotMetrics:
             xdom: tuple[float, float],
             ydom: tuple[float, float], 
             axes_xpad: tuple[int, int]=(30,10), 
-            axes_ypad: tuple[int, int]=(40,10)):
+            axes_ypad: tuple[int, int]=(40,20)):
         
         assert xdom[0] < xdom[1], "Invalid x domain"
         assert ydom[0] < ydom[1], "Invalid y domain"
@@ -122,7 +122,7 @@ class PlotMetrics:
         update only their relevant dimensions to improve performance.
         """
         for element in self._elements:
-            element.update_dimensions(metric)
+            element.update_metrics(metric)
 
     # Top-level metrics and properties
     @property
@@ -199,6 +199,57 @@ class PlotMetrics:
     def axes_dim(self) -> np.ndarray:
         """Dimensions of the axes in pygame coordinates."""
         return self.dim - np.hstack([self._axes_xpad.sum(), self._axes_ypad.sum()]) 
+
+
+class Canvas:
+
+    def __init__(
+            self,
+            pos: tuple[int, int],
+            dim: tuple[int, int],
+            xdom: tuple[float, float], 
+            ydom: tuple[float, float],
+            **kwargs):
+        """
+        Container for all plot elements and single source of truth for dimensions and domains.
+        
+        Args:
+            pos: Canvas position (x, y) in screen coordinates
+            dim: Canvas dimensions (width, height) in pixels
+            xdom: X-axis domain (min, max) in data coordinates
+            ydom: Y-axis domain (min, max) in data coordinates                                            
+        """
+        pygame.init()
+
+        # Initialize metrics manager
+        self.metrics = PlotMetrics(pos, dim, xdom, ydom)
+        self.theme = PlotTheme(**kwargs)
+
+        # Plot draw and element instances to metrics        
+        self.axes = Axes(self)
+        self.title = Title(self, kwargs.get("title", ""))
+        self.axisx = Axis(self, Axis.X)
+        self.axisy = Axis(self, Axis.Y)
+
+        for element in [self.axes, self.title, self.axisx, self.axisy]:
+            self.metrics.add_element(self.axes)
+
+        self.pr = PlotRenderer(self)
+
+    def draw(self, surface):
+        self.pr.clear()
+
+        # Draw the canvas itself
+        self.pr.rect(
+            (0,0), self.metrics.dim, self.theme.colors["canvas_bg"],
+            self.theme.colors["canvas_line"], on_axes=False)
+        
+        self.axes.draw()
+        self.title.draw()
+        self.axisx.draw()
+        self.axisy.draw()
+
+        self.pr.draw(surface)
 
 
 class Axes(Element):
@@ -476,52 +527,3 @@ class Legend(Element):
         super().__init__(parent_canvas)
 
 
-class Canvas:
-
-    def __init__(
-            self,
-            pos: tuple[int, int],
-            dim: tuple[int, int],
-            xdom: tuple[float, float], 
-            ydom: tuple[float, float],
-            **kwargs):
-        """
-        Container for all plot elements and single source of truth for dimensions and domains.
-        
-        Args:
-            pos: Canvas position (x, y) in screen coordinates
-            dim: Canvas dimensions (width, height) in pixels
-            xdom: X-axis domain (min, max) in data coordinates
-            ydom: Y-axis domain (min, max) in data coordinates                                            
-        """
-        pygame.init()
-
-        # Initialize metrics manager
-        self.metrics = PlotMetrics(pos, dim, xdom, ydom)
-        self.theme = PlotTheme(**kwargs)
-
-        # Plot draw and element instances to metrics        
-        self.axes = Axes(self)
-        self.title = Title(self, kwargs.get("title", ""))
-        self.axisx = Axis(self, Axis.X)
-        self.axisy = Axis(self, Axis.Y)
-
-        for element in [self.axes, self.title, self.axisx, self.axisy]:
-            self.metrics.add_element(self.axes)
-
-        self.pr = PlotRenderer(self)
-
-    def draw(self, surface):
-        self.pr.clear()
-
-        # Draw the canvas itself
-        self.pr.rect(
-            (0,0), self.metrics.dim, self.theme.colors["canvas_bg"],
-            self.theme.colors["canvas_line"], on_axes=False)
-        
-        self.axes.draw()
-        self.title.draw()
-        self.axisx.draw()
-        self.axisy.draw()
-
-        self.pr.draw(surface)

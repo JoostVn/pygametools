@@ -25,8 +25,12 @@ class PlotTestApp(Application):
 
  
         # Testing dynamic pos
-        if False:
-            self.plots[0].update_dimensions(pos=self.plots[0].pos + 1)
+        if True:
+            # pos = self.plots[0].metrics.pos
+            
+            self.plots[0].metrics.pos += 1
+            
+            # self.plots[0].update_dimensions(pos=self.plots[0].pos + 1)
 
         # Testing dynamic pad
         if False:

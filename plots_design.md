@@ -8,6 +8,7 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 - Plotting the accuracy of a neural network as it is optimized over different iterations.
 
 ## TODO / plot_design file
+
 1. ✅ Go through files and fill the lists of requirements.
 2. ✅ Let Claude rewrite and clean up / error-check the design file a bit. (Also: dots after sentences, grammar, marking references to code/objects/attributes with ``, sentence structure, etc.)
 3. ✅ Further fill in the requirements with Claude; make sure any obvious additions in all lists are taken into account.
@@ -18,18 +19,27 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 
 ## TODO / implementation
 
-Only start when the design file is ready. 
+Only start with implementation when the design file is ready! 
 
+1. Improve the test/example script `examples\plots_dev.py`:
+    - GUI sliders for plot metrics for easy testing
+    - More?
 1. Refactor the current implementation of the `plots` module such that it is in line with-/supports the design decisions as described in this file.
     - `PlotMetrics`
         - Consequent location for any element-specific metric (such as axes padding, title size, legend size etc.)
         - Order of operations in metric updates (what updates what?)
+        - Make it easy to change dimensions from `Canvas` without having to type `canvas.metrics.dim = ...` each time.
     - `PlotRenderer`
         - Pass to elements for drawing or have elements hold a reference to the instance itself.
+    - `Elements`
+        - Remove coupling between `Element` and each parent `Canvas`: they shouldn't be aware of the `PlotRenderer` and `Canvas` objects. Any update and draw functions should just reveive the required data.
+        - TODO: does this make sense? 
 
 ## Objects and Terminology
 
 ### Overview
+
+TODO: move to a table
 
 The `plots` module, for the most part, follows Matplotlib terminology. Objects are named as follows.
 
@@ -46,13 +56,6 @@ The `plots` module, for the most part, follows Matplotlib terminology. Objects a
 - `PlotRenderer`: Owns the two Pygame surfaces and is the single drawing layer responsible for coordinate conversion and all Pygame drawing calls.
 - `Element`: Abstract base class for all drawable plot elements (`Axes`, `Axis`, `Title`, `Legend`, …).
 - `LinePlot` / `ScatterPlot` / `BarPlot` / `ArrayPlot`: Concrete plot-data elements that live inside `Axes`.
-
-
-
-
-> TODO: How to handle element dimensions?
-
-
 
 Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordinates.
 
@@ -107,8 +110,6 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 
 
 
-
-
 ## Functional Requirements
 
 
@@ -120,8 +121,7 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
     - The `Canvas` `pos`.
     - The positioning and dimensions of plot elements.
     - Adding/removing plots.
-
-> Static plots are just dynamic plots that are not being updated.
+- Static plots are just dynamic plots that are not being updated.
 
 
 ### PlotMetrics
@@ -185,7 +185,6 @@ The following plot types will be supported:
 - How to handle the dimensions and locations of elements within the canvas? For example, where should the axes pos live? If they are a property of the `Axes` instance, how will the `Title` be able to center itself above it?
 - How to handle the different coordinate systems (Pygame / plot)?
 - Where should plot metrics live? How to handle the fact that any metric could be changed at any time and that all elements should adjust accordingly?
-- ✅ **Single surface vs. separate axes surface**: Two surfaces are used — `surface_axes` for plot data and `surface_canvas` for everything else. Ticks and tick labels are drawn on `surface_canvas`, so they are never clipped. Plot data on `surface_axes` is clipped automatically.
 - **Observer pattern scope**: `PlotMetrics` currently notifies all elements. Should plot-data elements (`LinePlot`, etc.) also register directly with `PlotMetrics`, or should `Axes` be responsible for propagating metric changes to its child plots?
 - **Coordinate input types**: Should `PlotRenderer` accept plain tuples, lists, and numpy arrays interchangeably, or enforce a single type for performance?
 - Should elements be aware of their parent canvas? Or should the parent canvas just call a draw method for all plot it's holding and pass the `PlotRenderer` object?
