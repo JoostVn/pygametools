@@ -1,3 +1,5 @@
+from typing import Literal
+
 import pygame
 import pygame
 import pygame.gfxdraw
@@ -20,24 +22,24 @@ class PlotRenderer:
     def metrics(self):
         return self.canvas.metrics
 
-    def update_dimensions(self, **args):
+    def update_metrics(self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad'] | None=None):
 
-        # TODO: call from plot_metrics!
+        if metric == 'dim':
+            self.surface_canvas = pygame.Surface(self.canvas.metrics.dim)
+            self.surface_axes = pygame.Surface(self.canvas.metrics.axes_dim)
 
-        if "dim" in args:
-            self.surface_canvas = pygame.Surface(self.canvas.dim)
-            self.surface_axes = pygame.Surface(self.canvas.axes.dim)
-
-        if "pad" in args:
-            self.surface_axes = pygame.Surface(self.canvas.axes.dim)
+        if metric == "pad":
+            self.surface_axes = pygame.Surface(self.canvas.axes_dim)
 
     def clear(self):
         """
         Reset the draw surfaces to allow the plots to be re-drawn.
         """
+      
         self.surface_canvas.fill(self.canvas.theme.colors["canvas_bg"])
         self.surface_axes.fill(self.canvas.theme.colors["axes_bg"])
-
+        
+        
     def draw(self, surface):
         """
         Draw the plot surface on another Pygame surface.
@@ -72,8 +74,6 @@ class PlotRenderer:
             (pos[0] - self.metrics.xdom[0]) / self.metrics.xdom_span,
             (pos[1] - self.metrics.ydom[0]) / self.metrics.ydom_span
         ])
-
-    
 
         # Reverse y coordinate
         if relative_pos.ndim == 2:

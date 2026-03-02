@@ -24,7 +24,14 @@ Only start with implementation when the design file is ready!
 0. Salvage the old `plotting` module for usefol code (such as the color preview)
 1. Improve the test/example script `examples\plots_dev.py`:
     - GUI sliders for plot metrics for easy testing
-    - More?
+    - Some dynamic and static data for plots such has:
+        - Randomwalks (dynamic line)
+        - Double dice throw (dynamic bar)
+        - gif (dynamic array)
+        - test image (static array)
+        - normal distribution draws (dynamic scatter plot)
+        
+
 2. Refactor the current implementation of the `plots` module such that it is in line with-/supports the design decisions as described in this file.
     - `PlotMetrics`
         - Consequent location for any element-specific metric (such as axes padding, title size, legend size etc.)
@@ -181,12 +188,19 @@ The following plot types will be supported:
 
 ## Questions / Design Choices
 
+- `PlotMetrics`
+    - In the current configuration, `PlotMetrics` holds all objects / elements it must update. But, each element also holds a referencem to `PlotMetrics` because they need it for their own logic. Is this circle reference a problem? If yes, fix.
+    - **Observer pattern scope**: `PlotMetrics` currently notifies all elements. Should plot-data elements (`LinePlot`, etc.) also register directly with `PlotMetrics`, or should `Axes` be responsible for propagating metric changes to its child plots?
+    - Should `PlotMetrics` be responsible for update calls to other elements?
+    - How to handle the dimensions and locations of elements within the canvas? For example, where should the axes pos live? If they are a property of the `Axes` instance, how will the `Title` be able to center itself above it?
+    - There should be support for automatically updating xdom/ydom when adding new data if that new data is out of bounds of the current domains. Where should that logic live?
 
-- Should `PlotMetrics` be responsible for update calls to other elements?
-- How to handle the dimensions and locations of elements within the canvas? For example, where should the axes pos live? If they are a property of the `Axes` instance, how will the `Title` be able to center itself above it?
-- How to handle the different coordinate systems (Pygame / plot)?
-- Where should plot metrics live? How to handle the fact that any metric could be changed at any time and that all elements should adjust accordingly?
-- **Observer pattern scope**: `PlotMetrics` currently notifies all elements. Should plot-data elements (`LinePlot`, etc.) also register directly with `PlotMetrics`, or should `Axes` be responsible for propagating metric changes to its child plots?
-- **Coordinate input types**: Should `PlotRenderer` accept plain tuples, lists, and numpy arrays interchangeably, or enforce a single type for performance?
-- Should elements be aware of their parent canvas? Or should the parent canvas just call a draw method for all plot it's holding and pass the `PlotRenderer` object?
-- Should the plot legend have its own surface?
+- Coordinate data
+    - How to handle the different coordinate systems (Pygame / plot)?
+    - **Coordinate input types**: Should `PlotRenderer` accept plain tuples, lists, and numpy arrays interchangeably, or enforce a single type for performance?
+
+- Structure 
+    - Should elements be aware of their parent canvas? Or should the parent canvas just call a draw method for all plot it's holding and pass the `PlotRenderer` object?
+
+- Other
+    - Should the plot legend have its own surface?

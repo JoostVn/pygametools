@@ -1,21 +1,18 @@
 """
-Elements:
-    - Canvas: Rectangle that contains ALL other plot elements.
-    - PlotMetrics: contains top-level dimensions, positions, domains. Also 
-      notifies elements of changes. Elements only re-calculate their dimensions when they change.
-
-      # TODO: fix the circle reference between metrics and elements. Maybe remove update responsibiliy from metrics?
-      # TODO: in draw function, make sure on_axes converts coordinates instead of drawing on axes surface
-      # TODO: fix line of axes not showing up
-      # TODO: Change update_dimensions functions to update_metrics with a Literal metric
-      # TODO: render axes without surface (to prevent out of bound ticks)
-      # TODO: Fix axes: tick generation, orientation settings etc.
-      # TODO: make sure all elements are registered to metrics and update on changes
-      # TODO: test different cases
-      # TODO: make sure title, labels, ticks are drawn correctly after updates
-      # TODO: Implement legend element
-      # TODO: split update elements into dom/dim/pos/pad such that not every change needs all updates
-      # TODO: optimize metrics updates: only update elemements where relevant metrics have changed
+# TODO: remove all axis logic from axis objects such that only ticks and labels remain
+# TODO: have ticks and labels drawn on the canvas surface instead of the axes surface
+      
+OLD
+# TODO: fix the circle reference between metrics and elements. Maybe remove update responsibiliy from metrics?
+# TODO: in draw function, make sure on_axes converts coordinates instead of drawing on axes surface
+# TODO: fix line of axes not showing up
+# TODO: Change update_dimensions functions to update_metrics with a Literal metric
+# TODO: render axes without surface (to prevent out of bound ticks)
+# TODO: Fix axes: tick generation, orientation settings etc.
+# TODO: make sure all elements are registered to metrics and update on changes
+# TODO: make sure title, labels, ticks are drawn correctly after updates
+# TODO: Implement legend element
+# TODO: optimize metrics updates: only update elemements where relevant metrics have changed
  
 """
 import numpy as np
@@ -73,11 +70,10 @@ class PlotTheme:
         Plot color and font properties.
         """
         self.colors = {
-            "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY5),
+            "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY6),
             "canvas_line": kwargs.get("cols_canvas_line", Color.GREY3),
             "axes_bg": kwargs.get("cols_axes_bg", Color.WHITE),
-            "axes_line": kwargs.get("cols_axes_line", Color.GREY3),
-            "axis": kwargs.get("cols_axis", Color.GREY4)}        
+            "axes_line": kwargs.get("cols_axes_line", Color.GREY3)}        
         font_type = "msreferencesansserif"
         self.fonts = {
             "title": (pygame.font.SysFont(font_type, 12), Color.BLACK),
@@ -94,7 +90,7 @@ class PlotMetrics:
             xdom: tuple[float, float],
             ydom: tuple[float, float], 
             axes_xpad: tuple[int, int]=(30,10), 
-            axes_ypad: tuple[int, int]=(40,20)):
+            axes_ypad: tuple[int, int]=(30,20)):
         
         assert xdom[0] < xdom[1], "Invalid x domain"
         assert ydom[0] < ydom[1], "Invalid y domain"
@@ -107,22 +103,22 @@ class PlotMetrics:
         self._axes_ypad = np.array(axes_ypad)
 
 
-        # List of elements to notify on changes
-        self._elements = []  
+        # List of objects to notify on changes
+        self._notify_objects = []  
 
-    def add_element(self, element: Element):
-        """Add an element that needs to be notified of changes"""
-        self._elements.append(element)
+    def add_object(self, element: Element):
+        """Add an object that needs to be notified of changes"""
+        self._notify_objects.append(element)
 
-    def update_elements(self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad']):
+    def update_metrics(self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad']):
         """
-        Notify all elements that metrics have changed.
+        Notify all objects that metrics have changed.
 
-        The changed metric is included in the function call such that underlying elements can 
+        The changed metric is included in the function call such that underlying objects can 
         update only their relevant dimensions to improve performance.
         """
-        for element in self._elements:
-            element.update_metrics(metric)
+        for obj in self._notify_objects:
+            obj.update_metrics(metric)
 
     # Top-level metrics and properties
     @property
@@ -132,7 +128,7 @@ class PlotMetrics:
     @pos.setter
     def pos(self, value: np.ndarray):
         self._pos = value
-        self.update_elements(metric='pos')
+        self.update_metrics(metric='pos')
     
     @property
     def dim(self) -> np.ndarray:
@@ -141,7 +137,7 @@ class PlotMetrics:
     @dim.setter
     def dim(self, value: np.ndarray):
         self._dim = value
-        self.update_elements(metric='dim')
+        self.update_metrics(metric='dim')
     
     @property
     def xdom(self) -> np.ndarray:
@@ -151,7 +147,7 @@ class PlotMetrics:
     def xdom(self, value: np.ndarray):
         assert value[0] < value[1], "Invalid x domain"
         self._xdom = value
-        self.update_elements(metric='xdom')
+        self.update_metrics(metric='xdom')
 
     @property
     def ydom(self) -> np.ndarray:
@@ -161,7 +157,7 @@ class PlotMetrics:
     def ydom(self, value: np.ndarray):
         assert value[0] < value[1], "Invalid y domain"
         self._ydom = value
-        self.update_elements(metric='ydom')
+        self.update_metrics(metric='ydom')
 
     @property
     def axes_xpad(self) -> np.ndarray:
@@ -170,7 +166,7 @@ class PlotMetrics:
     @axes_xpad.setter
     def axes_xpad(self, value: np.ndarray):
         self._axes_xpad = value
-        self.update_elements(metric='xpad')
+        self.update_metrics(metric='xpad')
 
     @property
     def axes_ypad(self) -> np.ndarray:
@@ -179,7 +175,7 @@ class PlotMetrics:
     @axes_ypad.setter
     def axes_ypad(self, value: np.ndarray):
         self._axes_ypad = value
-        self.update_elements(metric='ypad')
+        self.update_metrics(metric='ypad')
 
     # Derived properties
     @property
@@ -199,6 +195,26 @@ class PlotMetrics:
     def axes_dim(self) -> np.ndarray:
         """Dimensions of the axes in pygame coordinates."""
         return self.dim - np.hstack([self._axes_xpad.sum(), self._axes_ypad.sum()]) 
+    
+    @property
+    def axes_nw(self) -> np.ndarray:
+        """NW point of axes on Canvas surface in pygame coordinates"""
+        return self.axes_pos
+    
+    @property
+    def axes_sw(self) -> np.ndarray:
+        """SW point of axes on Canvas surface in pygame coordinates"""
+        return self.axes_pos + [0, self.axes_dim[1]]
+    
+    @property
+    def axes_ne(self) -> np.ndarray:
+        """NE point of axes on Canvas surface in pygame coordinates"""
+        return self.axes_pos + [self.axes_dim[0], 0]
+    
+    @property
+    def axes_se(self) -> np.ndarray:
+        """SE point of axes on Canvas surface in pygame coordinates"""
+        return self.axes_pos + self.axes_dim
 
 
 class Canvas:
@@ -230,25 +246,28 @@ class Canvas:
         self.title = Title(self, kwargs.get("title", ""))
         self.axisx = Axis(self, Axis.X)
         self.axisy = Axis(self, Axis.Y)
-
-        for element in [self.axes, self.title, self.axisx, self.axisy]:
-            self.metrics.add_element(self.axes)
-
         self.pr = PlotRenderer(self)
+        
+        # Add objects to notify on metric changes
+        for obj in [self.pr, self.axes, self.title, self.axisx, self.axisy]:
+            self.metrics.add_object(obj)
 
     def draw(self, surface):
         self.pr.clear()
 
-        # Draw the canvas itself
+        # Draw a border around the canvas itself
         self.pr.rect(
             (0,0), self.metrics.dim, self.theme.colors["canvas_bg"],
             self.theme.colors["canvas_line"], on_axes=False)
         
+        # Draw all other elements
+        # TODO: list of drawables?
         self.axes.draw()
         self.title.draw()
         self.axisx.draw()
         self.axisy.draw()
-
+        
+        # TODO: does it make sense to call draw on the renderer itself?
         self.pr.draw(surface)
 
 
@@ -275,8 +294,11 @@ class Axes(Element):
             self.dim = self.metrics.axes_dim
         
     def draw(self):
+        
+        
+        # Draw a line around the axes surface itself (1 pixel wider)
         self.pr.rect(
-            self.pos, self.dim, facecol=self.colors["axes_bg"],
+            self.metrics.axes_pos-1,  self.metrics.axes_dim+2, facecol=self.colors["axes_bg"],
             linecol=self.colors["axes_line"], on_axes=False)
 
 
@@ -306,9 +328,8 @@ class Axis(Element):
         self.orientation = orientation          
         self.tick_margin = kwargs.get("margin", 0.1)
         self.tick_length = kwargs.get("length", 3) 
-
-        self.num_ticks = 6
-        self.pos_line = np.zeros((2,2))
+        self.num_ticks = kwargs.get("length", 6) 
+        
         self.pos_ticks = np.zeros(2)
         
         self.labels = None
@@ -318,85 +339,65 @@ class Axis(Element):
         self.label_mode = None
 
         self.update_metrics()
+        
+    @property
+    def dom(self) -> np.ndarray:
+        """Return the domain of this axis in graph coordinates."""
+        return self.canvas.metrics.xdom if self.orientation == Axis.X else self.canvas.metrics.ydom
+    
+    @property
+    def span(self) -> float:
+        """Return the span of this axis domain."""
+        return np.diff(self.dom)[0]
 
     @property
     def text_va(self) -> str:
+        """Passed to PlotRenderer"""
         return 'bottom' if self.orientation == Axis.X else 'center'
     
     @property
     def text_ha(self) -> str:
+        """Passed to PlotRenderer"""
         return 'center' if self.orientation == Axis.X else 'right'
 
     @property
     def tick_direction(self) -> np.ndarray:
+        """Unit vector of tick direction from axis, depending on the axis orientation."""
         return np.array((0, 1)) if self.orientation == Axis.X else np.array((-1, 0))
-
-    @property
-    def dom(self) -> np.ndarray:
-        """
-        Return the domain of this axis.
-        """
-        return self.canvas.metrics.xdom if self.orientation == Axis.X else self.canvas.metrics.ydom
     
     @property
-    def dom_other(self) -> np.ndarray:
-        """
-        Return the domain of the other axis (x if y, y if x).
-        """
-        return self.canvas.metrics.ydom if self.orientation == Axis.X else self.canvas.metrics.xdom
-
-    @property
-    def span(self) -> float:
-        """
-        Return the span of this axis domain.
-        """
-        return np.diff(self.dom)[0]
-
-    @property
-    def crossing(self) -> float:
-        """
-        Return the coordinate of the other axis at which the axis crosses.
-        """
-        # TODO: implement optional crossing at 0 if in domain
-        return self.dom_other[0]
-
+    def axis_direction(self) -> np.ndarray:
+        """Unit vector of axis direction from origin, depending on the axis orientation."""
+        return np.array((1, 0)) if self.orientation == Axis.X else np.array((0, -1))
+ 
     def update_metrics(
             self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad'] | None=None):
         """
         Recalculate the ticks locations and axis line.
         """
-
-
-        # Compute this axis line coordinates as [[x1, y1], [x2, y2]]
-        # First compute the diagonal line
-        pos_line = np.transpose(np.vstack([
-            self.canvas.metrics.xdom,
-            self.canvas.metrics.ydom]))
+        # TODO: use the `metrics` parameter to only update the part of axis that is needed.
+        # TODO: clarify the type of coordinate system
+        # TODO: calculate the number of ticks based on dimensions
+        # TODO: move tick updatiting to its own method such that it can also be called from set_num_ticks
         
+        # Alias for metrics
+        metrics = self.canvas.metrics
         
-    
-        # Then set fix the position to either vertical or horizontal    
-        pos_line[:,1-self.orientation] = self.crossing
-        self.pos_line = pos_line
+        # Axis line in [[x1, y1], [x2, y2]]
+        if self.orientation == self.X:
+            axis_line_endpoints = np.vstack([metrics.axes_sw, metrics.axes_se])
+        elif self.orientation == self.Y:
+            axis_line_endpoints = np.vstack([metrics.axes_sw, metrics.axes_nw])
 
         # Update ticks
         if self.tick_mode == Axis.FIXED_TICK_POSITIONS:
-
-            # Compute crossing ticks (diagnal for now)
-
-            # TODO: calculate n based on axis dimensions
-            offset = self.tick_margin * self.span
-
-            start = pos_line[0]
-            start[self.orientation] += offset
-
-            end = pos_line[1]
-            end[self.orientation] -= offset
-
-            pos_ticks = np.linspace(start, end, self.num_ticks)
-
-            self.pos_ticks = pos_ticks
-
+            offset = self.axis_direction * self.tick_margin * self.metrics.axes_dim
+            self.pos_ticks = np.linspace(
+                axis_line_endpoints[0] + offset,
+                axis_line_endpoints[1] - offset,
+                self.num_ticks,
+                endpoint=True)
+            
         elif self.tick_mode == Axis.FIXED_TICK_VALUES:
             raise NotImplementedError
 
@@ -407,21 +408,21 @@ class Axis(Element):
         elif self.label_mode == Axis.LABELS_TEXT:
             raise NotImplementedError
 
-    def update_fixed_position_ticks(self):
-        """
-        TODO: move fixed tick part from function above here.
-        """
-        pass
-
     def update_numerical_labels(self):
         """
         Get string numberical labels with appropiate formatting.
         """
-        numbers = self.pos_ticks[:,self.orientation]
-        mag = floor(log10(max(abs(numbers))))
+        
+        numbers = np.linspace(
+            self.dom[0] + self.span * self.tick_margin,
+            self.dom[1] - self.span * self.tick_margin,
+            num=self.num_ticks,
+            endpoint=True) 
 
-        if -5 < mag < 5:
-            round_to = max(0, 1 - mag)
+        order_of_magnitude = floor(log10(max(abs(numbers))))
+
+        if -5 < order_of_magnitude < 5:
+            round_to = max(0, 1 - order_of_magnitude)
             self.labels = [f"%.{round_to}f" % x for x in numbers]
         else:
             self.labels = [np.format_float_scientific(x, 1) for x in numbers]
@@ -432,13 +433,11 @@ class Axis(Element):
 
         Ticks will change their value to keep their relative location.
         """
-
-        # TODO: remove?
+        # TODO Decide how different tick styles get set.
+        
         self.tick_mode = Axis.FIXED_TICK_POSITIONS
         self.label_mode = Axis.LABELS_NUMERICAL
-
         self.num_ticks = num_ticks
-
         self.update_metrics()
 
     def set_ticks(self, ticks, labels):
@@ -457,38 +456,21 @@ class Axis(Element):
     def set_labels(self, labels):
         pass
 
-
     def draw(self):
 
-        if self.orientation == self.X:
-            pass
-            self.pr.line(
-                self.pos_line, Color.BLUE3, on_axes=True)
-        else:
-            pass
-            # self.pr.line(
-            #     self.pos_line, Color.RED3, on_axes=True)
-        
-
-
-        # Draw axis line
-        # self.pr.line(
-        #     self.pos_line, self.colors["axis"], on_axes=True)
-
-    
         # Draw ticks
         tick_vector = self.tick_direction * self.tick_length
         for i, (pos, label) in enumerate(zip(self.pos_ticks, self.labels)):
 
             self.pr.vector(
-                pos, tick_vector, self.colors["axis"],
-                on_axes=True)
+                pos, tick_vector, self.colors["axes_line"],
+                on_axes=False)
 
             font, color =  self.fonts["tick"]
             offset = self.tick_direction * (2 + self.tick_length)
             self.pr.text(
                 label, font, color, pos, self.text_ha, self.text_va,
-                offset, on_axes=True)
+                offset, on_axes=False)
 
 
 class Title(Element):
