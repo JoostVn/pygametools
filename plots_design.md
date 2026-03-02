@@ -21,10 +21,11 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 
 Only start with implementation when the design file is ready! 
 
+0. Salvage the old `plotting` module for usefol code (such as the color preview)
 1. Improve the test/example script `examples\plots_dev.py`:
     - GUI sliders for plot metrics for easy testing
     - More?
-1. Refactor the current implementation of the `plots` module such that it is in line with-/supports the design decisions as described in this file.
+2. Refactor the current implementation of the `plots` module such that it is in line with-/supports the design decisions as described in this file.
     - `PlotMetrics`
         - Consequent location for any element-specific metric (such as axes padding, title size, legend size etc.)
         - Order of operations in metric updates (what updates what?)

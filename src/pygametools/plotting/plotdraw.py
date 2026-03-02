@@ -2,7 +2,7 @@ import pygame
 import pygame.gfxdraw
 import numpy as np
 from pygametools.color import Color
-# from scipy.ndimage import zoom
+from scipy.ndimage import zoom
 # from debug.time import ConsecutiveLineTimer, FuncStats
 
 
@@ -211,13 +211,13 @@ class PlotDraw:
         # TODO: Only scale when dimensions change
         # TODO: Implement zoom without scipy
 
-        return 
+        # return 
 
         # TODO: Only scale when dimensions change
 
         # Scale array to plot dimensions
         scale_levels = np.divide(self.plot.dim, arr.shape[:-1])
-        # scaled_arr = zoom(arr, [*scale_levels, 1], order=0).astype(int)
+        scaled_arr = zoom(arr, [*scale_levels, 1], order=0).astype(int)
 
         # Create surface from array and draw
         surface = pygame.surfarray.make_surface(scaled_arr)
