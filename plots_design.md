@@ -7,7 +7,7 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 - Plotting the genomes of a whole population in a genetic algorithm as a grayscale 2D array.
 - Plotting the accuracy of a neural network as it is optimized over different iterations.
 
-## TODO
+## TODO / plot_design file
 1. ✅ Go through files and fill the lists of requirements.
 2. ✅ Let Claude rewrite and clean up / error-check the design file a bit. (Also: dots after sentences, grammar, marking references to code/objects/attributes with ``, sentence structure, etc.)
 3. ✅ Further fill in the requirements with Claude; make sure any obvious additions in all lists are taken into account.
@@ -16,6 +16,16 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 6. Make an ASCII figure of the `Canvas` class and all possible elements such as `Axes` and `Axis`.
 7. Make a high-level plan and decide on some design patterns such as OO vs. functional design with dataclasses.
 
+## TODO / implementation
+
+Only start when the design file is ready. 
+
+1. Refactor the current implementation of the `plots` module such that it is in line with-/supports the design decisions as described in this file.
+    - `PlotMetrics`
+        - Consequent location for any element-specific metric (such as axes padding, title size, legend size etc.)
+        - Order of operations in metric updates (what updates what?)
+    - `PlotRenderer`
+        - Pass to elements for drawing or have elements hold a reference to the instance itself.
 
 ## Objects and Terminology
 
@@ -179,3 +189,4 @@ The following plot types will be supported:
 - **Observer pattern scope**: `PlotMetrics` currently notifies all elements. Should plot-data elements (`LinePlot`, etc.) also register directly with `PlotMetrics`, or should `Axes` be responsible for propagating metric changes to its child plots?
 - **Coordinate input types**: Should `PlotRenderer` accept plain tuples, lists, and numpy arrays interchangeably, or enforce a single type for performance?
 - Should elements be aware of their parent canvas? Or should the parent canvas just call a draw method for all plot it's holding and pass the `PlotRenderer` object?
+- Should the plot legend have its own surface?

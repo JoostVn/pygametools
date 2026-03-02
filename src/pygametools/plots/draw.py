@@ -5,15 +5,13 @@ import numpy as np
 from pygametools.color import Color
 
 
-class PlotDraw:
+class PlotRenderer:
 
     def __init__(self, parent_canvas, **kwargs):
         self.parent_canvas = parent_canvas
         self.surface_canvas = pygame.Surface(self.canvas.metrics.dim)
-        # self.surface_axes = pygame.Surface(self.canvas.axes.dim)
-
-        # TODO surface for legend
-
+        self.surface_axes = pygame.Surface(self.canvas.axes.dim)
+        
     @property
     def canvas(self):
         return self.parent_canvas
@@ -28,28 +26,25 @@ class PlotDraw:
 
         if "dim" in args:
             self.surface_canvas = pygame.Surface(self.canvas.dim)
-            
-            # self.surface_axes = pygame.Surface(self.canvas.axes.dim)
+            self.surface_axes = pygame.Surface(self.canvas.axes.dim)
 
         if "pad" in args:
-            pass
-            # self.surface_axes = pygame.Surface(self.canvas.axes.dim)
+            self.surface_axes = pygame.Surface(self.canvas.axes.dim)
 
     def clear(self):
         """
         Reset the draw surfaces to allow the plots to be re-drawn.
         """
         self.surface_canvas.fill(self.canvas.theme.colors["canvas_bg"])
-        # self.surface_axes.fill(self.canvas.theme.colors["axes_bg"])
-
+        self.surface_axes.fill(self.canvas.theme.colors["axes_bg"])
 
     def draw(self, surface):
         """
         Draw the plot surface on another Pygame surface.
         """
-        # self.surface_canvas.blit(
-        #     self.surface_axes,
-        #     (self.canvas.metrics.axes_xpad[0], self.canvas.metrics.axes_ypad[0]))
+        self.surface_canvas.blit(
+            self.surface_axes,
+            (self.canvas.metrics.axes_xpad[0], self.canvas.metrics.axes_ypad[0]))
 
         surface.blit(self.surface_canvas, self.metrics.pos)
 

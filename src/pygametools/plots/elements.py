@@ -19,7 +19,7 @@ Elements:
  
 """
 import numpy as np
-from .draw import PlotDraw
+from .draw import PlotRenderer
 from pygametools.color import Color
 from abc import ABC, abstractmethod
 import pygame
@@ -53,8 +53,8 @@ class Element(ABC):
         return self.theme.fonts
 
     @property
-    def pdraw(self):
-        return self.canvas.pdraw
+    def pr(self):
+        return self.canvas.pr
 
     @abstractmethod
     def update_metrics(
@@ -224,7 +224,7 @@ class Axes(Element):
             self.dim = self.metrics.axes_dim
         
     def draw(self):
-        self.pdraw.rect(
+        self.pr.rect(
             self.pos, self.dim, facecol=self.colors["axes_bg"],
             linecol=self.colors["axes_line"], on_axes=False)
 
@@ -411,17 +411,17 @@ class Axis(Element):
 
         if self.orientation == self.X:
             pass
-            self.pdraw.line(
+            self.pr.line(
                 self.pos_line, Color.BLUE3, on_axes=True)
         else:
             pass
-            # self.pdraw.line(
+            # self.pr.line(
             #     self.pos_line, Color.RED3, on_axes=True)
         
 
 
         # Draw axis line
-        # self.pdraw.line(
+        # self.pr.line(
         #     self.pos_line, self.colors["axis"], on_axes=True)
 
     
@@ -429,13 +429,13 @@ class Axis(Element):
         tick_vector = self.tick_direction * self.tick_length
         for i, (pos, label) in enumerate(zip(self.pos_ticks, self.labels)):
 
-            self.pdraw.vector(
+            self.pr.vector(
                 pos, tick_vector, self.colors["axis"],
                 on_axes=True)
 
             font, color =  self.fonts["tick"]
             offset = self.tick_direction * (2 + self.tick_length)
-            self.pdraw.text(
+            self.pr.text(
                 label, font, color, pos, self.text_ha, self.text_va,
                 offset, on_axes=True)
 
@@ -462,7 +462,7 @@ class Title(Element):
 
     def draw(self):
         font, color =  self.fonts["title"]
-        self.pdraw.text(
+        self.pr.text(
             self.title, font, color, self.pos, ha="center",
             va="center", on_axes=False)
 
@@ -509,13 +509,13 @@ class Canvas:
         for element in [self.axes, self.title, self.axisx, self.axisy]:
             self.metrics.add_element(self.axes)
 
-        self.pdraw = PlotDraw(self)
+        self.pr = PlotRenderer(self)
 
     def draw(self, surface):
-        self.pdraw.clear()
+        self.pr.clear()
 
         # Draw the canvas itself
-        self.pdraw.rect(
+        self.pr.rect(
             (0,0), self.metrics.dim, self.theme.colors["canvas_bg"],
             self.theme.colors["canvas_line"], on_axes=False)
         
@@ -524,4 +524,4 @@ class Canvas:
         self.axisx.draw()
         self.axisy.draw()
 
-        self.pdraw.draw(surface)
+        self.pr.draw(surface)

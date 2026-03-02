@@ -23,7 +23,7 @@ class PlotTestApp(Application):
 
     def update(self):
 
-        pass
+ 
         # Testing dynamic pos
         if False:
             self.plots[0].update_dimensions(pos=self.plots[0].pos + 1)
