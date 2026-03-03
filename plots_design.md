@@ -24,13 +24,6 @@ Only start with implementation when the design file is ready!
 0. Salvage the old `plotting` module for usefol code (such as the color preview)
 1. Improve the test/example script `examples\plots_dev.py`:
     - GUI sliders for plot metrics for easy testing
-    - Some dynamic and static data for plots such has:
-        - Randomwalks (dynamic line)
-        - Double dice throw (dynamic bar)
-        - gif (dynamic array)
-        - test image (static array)
-        - normal distribution draws (dynamic scatter plot)
-        
 
 2. Refactor the current implementation of the `plots` module such that it is in line with-/supports the design decisions as described in this file.
     - `PlotMetrics`
@@ -42,6 +35,16 @@ Only start with implementation when the design file is ready!
     - `Elements`
         - Remove coupling between `Element` and each parent `Canvas`: they shouldn't be aware of the `PlotRenderer` and `Canvas` objects. Any update and draw functions should just reveive the required data.
         - TODO: does this make sense? 
+
+> ADD INTERMEDIATE STEPS
+
+99. Improve the test/example script `examples\plots_dev.py` with dynamic and static data for plots such has:
+    - Randomwalks (dynamic line)
+    - Double dice throw (dynamic bar)
+    - gif (dynamic array)
+    - test image (static array)
+    - normal distribution draws (dynamic scatter plot)
+
 
 ## Objects and Terminology
 
@@ -194,9 +197,11 @@ The following plot types will be supported:
     - Should `PlotMetrics` be responsible for update calls to other elements?
     - How to handle the dimensions and locations of elements within the canvas? For example, where should the axes pos live? If they are a property of the `Axes` instance, how will the `Title` be able to center itself above it?
     - There should be support for automatically updating xdom/ydom when adding new data if that new data is out of bounds of the current domains. Where should that logic live?
-
-- Coordinate data
-    - How to handle the different coordinate systems (Pygame / plot)?
+- Drawing and coordinates
+    - How to handle the different coordinate systems (Pygame / plot)? Mainly
+        - Is the coordinate conversion function (graph to pygame) a method of `PlotRenderer` or a separate function?
+        - Is the coordinate conversion called from elements or within the `PlotRenderer` based on a parameter?
+        - Should the draw surfaces be passed to the `PlotRenderer` or selected based on a parameter?
     - **Coordinate input types**: Should `PlotRenderer` accept plain tuples, lists, and numpy arrays interchangeably, or enforce a single type for performance?
 
 - Structure 

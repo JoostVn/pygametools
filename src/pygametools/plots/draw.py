@@ -1,10 +1,30 @@
 from typing import Literal
-
 import pygame
 import pygame
 import pygame.gfxdraw
 import numpy as np
 from pygametools.color import Color
+
+
+pygame.init()
+
+
+class PlotTheme:
+
+    def __init__(self, **kwargs):
+        """
+        Plot color and font properties.
+        """
+        self.colors = {
+            "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY6),
+            "canvas_line": kwargs.get("cols_canvas_line", Color.GREY3),
+            "axes_bg": kwargs.get("cols_axes_bg", Color.WHITE),
+            "axes_line": kwargs.get("cols_axes_line", Color.GREY3)}        
+        font_type = "msreferencesansserif"
+        self.fonts = {
+            "title": (pygame.font.SysFont(font_type, 12), Color.BLACK),
+            "legend": (pygame.font.SysFont(font_type, 10), Color.BLACK),
+            "tick": (pygame.font.SysFont(font_type, 8), Color.BLACK)}
 
 
 class PlotRenderer:
@@ -35,10 +55,8 @@ class PlotRenderer:
         """
         Reset the draw surfaces to allow the plots to be re-drawn.
         """
-      
         self.surface_canvas.fill(self.canvas.theme.colors["canvas_bg"])
         self.surface_axes.fill(self.canvas.theme.colors["axes_bg"])
-        
         
     def draw(self, surface):
         """
@@ -63,6 +81,9 @@ class PlotRenderer:
         reverse the y-coordinates. If pos is a list of points, it should have
         shape (nr_points, 2).
         """
+        # TODO: think of a better way to handle coordinate switching. I don't like this function that returns two objects
+            # fix: graph-to-pygame coordinate function 
+        # Optimize
         # TODO: what dimensions for pos do we allow? single point, list of points, numpy array?
         # TODO: don't return both surface and pos, but have separate methods
 
@@ -89,7 +110,6 @@ class PlotRenderer:
 
         return self.surface_axes, pos_axes
 
-
     def circle(self, on_axes=True):
         raise NotImplementedError
 
@@ -101,7 +121,6 @@ class PlotRenderer:
 
         pygame.draw.line(draw_surface, col, *draw_pos, width)
 
-
     def vector(self, pos, vector, col, on_axes=True):
         """
         Draw a vector from a given pos and direction.
@@ -112,7 +131,6 @@ class PlotRenderer:
         """
         draw_surface, draw_pos = self.get_surface_pos(pos, on_axes)
         pygame.draw.line(draw_surface, col, draw_pos, draw_pos+vector)
-
 
     def rect(
             self,
@@ -166,9 +184,3 @@ class PlotRenderer:
             pass
 
         draw_surface.blit(text_block, (x,y))
-
-
-
-
-
-

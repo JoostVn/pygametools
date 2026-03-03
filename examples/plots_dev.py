@@ -73,8 +73,6 @@ class PlotTestApp(Application):
         
     
 
-
-
 def main():
 
     # Create test plot
@@ -83,7 +81,6 @@ def main():
         dim=(350,250),
         xdom=(-5,10),
         ydom=(-10,30),
-        
         title="Plot for testing purposes")
 
     canvas.axisx.set_num_ticks(11)
@@ -91,7 +88,6 @@ def main():
 
     # Create app 
     app = PlotTestApp(window_size=(600,400))
-    
     
     # Add plots
     app.add_canvas(canvas)
@@ -110,10 +106,7 @@ def main():
     Slider(
         app, 'plot_ydim', domain=(80, 500), default=250, pos=(10, 55),
         width=60, height=20),
-    
-    
     ])
-    
     
     app.run()
     pygame.quit()

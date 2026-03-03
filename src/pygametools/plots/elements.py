@@ -16,10 +16,9 @@ OLD
  
 """
 import numpy as np
-from .draw import PlotRenderer
+from .draw import PlotRenderer, PlotTheme
 from pygametools.color import Color
 from abc import ABC, abstractmethod
-import pygame
 from math import floor, log10
 from typing import Literal
 
@@ -61,24 +60,6 @@ class Element(ABC):
     @abstractmethod
     def draw(self):
         pass
-
-
-class PlotTheme:
-
-    def __init__(self, **kwargs):
-        """
-        Plot color and font properties.
-        """
-        self.colors = {
-            "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY6),
-            "canvas_line": kwargs.get("cols_canvas_line", Color.GREY3),
-            "axes_bg": kwargs.get("cols_axes_bg", Color.WHITE),
-            "axes_line": kwargs.get("cols_axes_line", Color.GREY3)}        
-        font_type = "msreferencesansserif"
-        self.fonts = {
-            "title": (pygame.font.SysFont(font_type, 12), Color.BLACK),
-            "legend": (pygame.font.SysFont(font_type, 10), Color.BLACK),
-            "tick": (pygame.font.SysFont(font_type, 8), Color.BLACK)}
         
 
 class PlotMetrics:
@@ -101,7 +82,6 @@ class PlotMetrics:
         self._ydom = np.array(ydom) 
         self._axes_xpad = np.array(axes_xpad)
         self._axes_ypad = np.array(axes_ypad)
-
 
         # List of objects to notify on changes
         self._notify_objects = []  
@@ -235,9 +215,6 @@ class Canvas:
             xdom: X-axis domain (min, max) in data coordinates
             ydom: Y-axis domain (min, max) in data coordinates                                            
         """
-        pygame.init()
-
-        # Initialize metrics manager
         self.metrics = PlotMetrics(pos, dim, xdom, ydom)
         self.theme = PlotTheme(**kwargs)
 
@@ -246,9 +223,10 @@ class Canvas:
         self.title = Title(self, kwargs.get("title", ""))
         self.axisx = Axis(self, Axis.X)
         self.axisy = Axis(self, Axis.Y)
+        
+        # Instantiate plotrenderer and add objects to notify on metric changes
         self.pr = PlotRenderer(self)
         
-        # Add objects to notify on metric changes
         for obj in [self.pr, self.axes, self.title, self.axisx, self.axisy]:
             self.metrics.add_object(obj)
 
@@ -257,7 +235,7 @@ class Canvas:
 
         # Draw a border around the canvas itself
         self.pr.rect(
-            (0,0), self.metrics.dim, self.theme.colors["canvas_bg"],
+            np.array([0,0]), self.metrics.dim, self.theme.colors["canvas_bg"],
             self.theme.colors["canvas_line"], on_axes=False)
         
         # Draw all other elements
@@ -294,8 +272,6 @@ class Axes(Element):
             self.dim = self.metrics.axes_dim
         
     def draw(self):
-        
-        
         # Draw a line around the axes surface itself (1 pixel wider)
         self.pr.rect(
             self.metrics.axes_pos-1,  self.metrics.axes_dim+2, facecol=self.colors["axes_bg"],
@@ -303,16 +279,12 @@ class Axes(Element):
 
 
 class Axis(Element):
-
     X = 0
     Y = 1
-
     FIXED_TICK_POSITIONS = 0
     FIXED_TICK_VALUES = 1
-
     LABELS_NUMERICAL = 0
     LABELS_TEXT = 1
-
 
     def __init__(self, parent_canvas, orientation: int, **kwargs):
         """
@@ -329,9 +301,7 @@ class Axis(Element):
         self.tick_margin = kwargs.get("margin", 0.1)
         self.tick_length = kwargs.get("length", 3) 
         self.num_ticks = kwargs.get("length", 6) 
-        
         self.pos_ticks = np.zeros(2)
-        
         self.labels = None
 
         # Tick mode: either fixed locations or fixed values
@@ -384,11 +354,10 @@ class Axis(Element):
         metrics = self.canvas.metrics
         
         # Axis line in [[x1, y1], [x2, y2]]
-        if self.orientation == self.X:
-            axis_line_endpoints = np.vstack([metrics.axes_sw, metrics.axes_se])
-        elif self.orientation == self.Y:
-            axis_line_endpoints = np.vstack([metrics.axes_sw, metrics.axes_nw])
-
+        axis_line_endpoints = np.vstack([
+            metrics.axes_sw,
+            metrics.axes_sw + self.axis_direction * metrics.axes_dim])
+    
         # Update ticks
         if self.tick_mode == Axis.FIXED_TICK_POSITIONS:
             offset = self.axis_direction * self.tick_margin * self.metrics.axes_dim
@@ -412,7 +381,6 @@ class Axis(Element):
         """
         Get string numberical labels with appropiate formatting.
         """
-        
         numbers = np.linspace(
             self.dom[0] + self.span * self.tick_margin,
             self.dom[1] - self.span * self.tick_margin,
@@ -434,7 +402,7 @@ class Axis(Element):
         Ticks will change their value to keep their relative location.
         """
         # TODO Decide how different tick styles get set.
-        
+    
         self.tick_mode = Axis.FIXED_TICK_POSITIONS
         self.label_mode = Axis.LABELS_NUMERICAL
         self.num_ticks = num_ticks
@@ -481,7 +449,6 @@ class Title(Element):
         """
         super().__init__(parent_canvas)
         self.title = title
-
         self.update_metrics()
         
     def update_metrics(
@@ -507,5 +474,3 @@ class Legend(Element):
         Legend element for plots.
         """
         super().__init__(parent_canvas)
-
-
