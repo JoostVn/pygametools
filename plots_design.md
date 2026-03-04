@@ -26,10 +26,14 @@ Only start with implementation when the design file is ready!
     - GUI sliders for plot metrics for easy testing
 
 2. Refactor the current implementation of the `plots` module such that it is in line with-/supports the design decisions as described in this file.
+    - General
+        - Make sure that private attributes and methods are prefixed by an underscore.
+        - Implement getters and setters for attributes with additional logic (instead deidcated methods like set_num_ticks
     - `PlotMetrics`
         - Consequent location for any element-specific metric (such as axes padding, title size, legend size etc.)
         - Order of operations in metric updates (what updates what?)
         - Make it easy to change dimensions from `Canvas` without having to type `canvas.metrics.dim = ...` each time.
+        - 
     - `PlotRenderer`
         - Pass to elements for drawing or have elements hold a reference to the instance itself.
     - `Elements`
@@ -155,9 +159,25 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 
 ### Public Data API
 
-- Users interact only through `Canvas` and plot objects.
+- on the surface, users interact only directly with:
+    - `Canvas`, which, at instantiation, also inits base elements such as `Title`, `Axes`, `PlotMetrics`, etc.
+    - Plots (such as `LinePlot`, `ScatterPlot`, etc.) that are added to the canvas with:
 
-> TODO
+    ```python
+    canvas.add_plot(plot)
+    ```
+
+- Attributes of other elements can be adjusted by accessing them from the `Canvas` objects:
+
+    ```pyhton
+    canvas.metrics.pos = (20, 30)
+    ```
+
+    - All public attributes of elements should be set/retreived with getters and setters.
+    - All private attributes should be prefixed with an underscore.
+
+
+> TODO: add more
 
 ## Supported Plot Types
 
