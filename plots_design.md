@@ -19,7 +19,7 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 
 ## TODO / implementation
 
-Only start with implementation when the design file is ready! 
+Only start with implementation when the design file is ready!
 
 0. Salvage the old `plotting` module for usefol code (such as the color preview)
 1. Improve the test/example script `examples\plots_dev.py`:
@@ -34,7 +34,7 @@ Only start with implementation when the design file is ready!
         - Pass to elements for drawing or have elements hold a reference to the instance itself.
     - `Elements`
         - Remove coupling between `Element` and each parent `Canvas`: they shouldn't be aware of the `PlotRenderer` and `Canvas` objects. Any update and draw functions should just reveive the required data.
-        - TODO: does this make sense? 
+        - TODO: does this make sense?
 
 > ADD INTERMEDIATE STEPS
 
@@ -44,7 +44,6 @@ Only start with implementation when the design file is ready!
     - gif (dynamic array)
     - test image (static array)
     - normal distribution draws (dynamic scatter plot)
-
 
 ## Objects and Terminology
 
@@ -70,19 +69,16 @@ The `plots` module, for the most part, follows Matplotlib terminology. Objects a
 
 Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordinates.
 
-
 ### Canvas
 
 - A plot is a collection of elements contained within a `Canvas` object.
 - Any type of plot can be added to a `Canvas` object, so it may contain different plot types such as line plots and scatter plots.
 - The `Canvas` object holds a `PlotRenderer` instance, which owns the two Pygame surfaces: `surface_canvas` for all chrome elements (axes border, ticks, tick labels, axis labels, title, legend), and `surface_axes` for plot data.
 
-
 ### Axes
 
 - A `Canvas` always contains a single `Axes` object.
 - Plot data is drawn onto `surface_axes`. Because plot data is drawn on a separate surface, out-of-bounds data is clipped automatically without any per-point bounds checking.
-
 
 ### Axis Lines and Ticks
 
@@ -92,8 +88,6 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
     - Fixed values: ticks at specified data values whose pixel positions update when the domain changes.
 - Tick labels are either numerical (auto-formatted based on magnitude) or user-supplied strings.
 - Ticks and tick labels are drawn on `surface_canvas`, positioned relative to the edges of `Axes`. Tick pixel positions are computed directly from `axes_pos`, `axes_dim`, and the domain — no graph-to-canvas coordinate conversion is needed.
-
-
 
 ### Axis Labels
 
@@ -110,19 +104,13 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 - Each plot element provides a color swatch and a name string to the legend.
 - The legend can be positioned at a fixed corner of the `Axes`, or hidden.
 
-
 ### Grid
 
 - `Grid` is an optional element that extends tick positions as horizontal/vertical lines across the `Axes`.
 - Grid lines are drawn before plot data so they appear behind the data.
 - Grid visibility and style (color, line width) are configurable via `PlotTheme`.
 
-
-
-
-
 ## Functional Requirements
-
 
 ### Dynamic Plotting
 
@@ -134,20 +122,17 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
     - Adding/removing plots.
 - Static plots are just dynamic plots that are not being updated.
 
-
 ### PlotMetrics
 
 - The dimensions and domains of a `Canvas` object are stored in the `PlotMetrics` dataclass.
 - When any metric changes, `PlotMetrics` notifies all registered `Element` instances so they can recompute their layout.
 - Each `Element` receives the name of the changed metric, allowing it to skip recomputation for unrelated metrics.
 
-
 #### List of metrics
 
 - `pos`: The `(X, Y)` position of the `Canvas` on the top-level Pygame screen, in Pygame coordinates.
 - `dim`: The `(X, Y)` dimensions of the `Canvas` in Pygame coordinates.
 - `xdom` / `ydom`: The domain of a plot along each axis, in plot coordinates.
-
 
 ### Theming
 
@@ -162,22 +147,17 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
     - Graph coordinates: Coordinates relative to the X/Y domains of `Axes`. Used only when drawing plot data onto `surface_axes`.
 - `PlotRenderer` wraps Pygame drawing functions to accept either coordinate system and route to the correct surface.
 
-
 ### Adding Data to Plots
 
 - When data is added to a plot, it is stored within that plot object.
 - Out-of-bounds data is clipped automatically by `surface_axes`; no per-point bounds checking is required.
 - Dynamic plots only need to be updated when their data or metrics change. Otherwise, `surface_canvas` is reblitted as it was in the previous tick.
 
-
-
-
 ### Public Data API
 
 - Users interact only through `Canvas` and plot objects.
 
 > TODO
-
 
 ## Supported Plot Types
 
@@ -187,7 +167,6 @@ The following plot types will be supported:
 - Bar plot.
 - Scatter plot.
 - 2D array plot (Matplotlib: `imshow`).
-
 
 ## Questions / Design Choices
 
@@ -204,7 +183,7 @@ The following plot types will be supported:
         - Should the draw surfaces be passed to the `PlotRenderer` or selected based on a parameter?
     - **Coordinate input types**: Should `PlotRenderer` accept plain tuples, lists, and numpy arrays interchangeably, or enforce a single type for performance?
 
-- Structure 
+- Structure
     - Should elements be aware of their parent canvas? Or should the parent canvas just call a draw method for all plot it's holding and pass the `PlotRenderer` object?
 
 - Other
