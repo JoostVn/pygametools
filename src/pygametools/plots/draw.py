@@ -6,15 +6,14 @@ import numpy as np
 from pygametools.color import Color
 
 
-pygame.init()
-
-
 class PlotTheme:
 
     def __init__(self, **kwargs):
         """
         Plot color and font properties.
         """
+        pygame.init()
+        
         self.colors = {
             "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY6),
             "canvas_line": kwargs.get("cols_canvas_line", Color.GREY3),
