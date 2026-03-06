@@ -38,6 +38,10 @@ Only start with implementation when the design file is ready!
         - Consistent location for any element-specific metric (such as axes padding, title size, legend size, etc.).
     - `PlotRenderer`
         - Pass `PlotRenderer` to elements as a method argument for drawing (elements do not hold a permanent reference).
+        - Implement two draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates.
+        - Implement `_graph_to_canvas(pos, metrics) -> tuple[int, int]` as a private method on `PlotRenderer`.
+        - Surface selection is internal to `PlotRenderer`: canvas-coord methods draw to `surface_canvas`; graph-coord methods convert and draw to `surface_axes`.
+        - Enforce strict input types: `tuple[int, int]` for individual positions, `npt.NDArray[np.float64]` for bulk data. No implicit conversion.
     - `Elements`
         - Remove any `PlotMetrics` reference from all `Element` subclasses; receive it as a parameter in `on_metrics_changed`.
         - Remove coupling between `Element` and `Canvas` / `PlotRenderer`: update and draw functions receive only the data they need as arguments.
@@ -180,7 +184,7 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 - Drawing is done in two different coordinate systems:
     - Canvas coordinates: Pygame coordinates relative to the top-left of `surface_canvas`.
     - Graph coordinates: Coordinates relative to the X/Y domains of `Axes`. Used only when drawing plot data onto `surface_axes`.
-- `PlotRenderer` wraps Pygame drawing functions to accept either coordinate system and route to the correct surface.
+- `PlotRenderer` exposes two families of drawing methods — one per coordinate system (e.g. `draw_line_canvas` / `draw_line_graph`). Elements call the appropriate family and pass raw coordinates; `PlotRenderer` handles conversion and surface selection internally. Elements never call a coordinate conversion function directly.
 
 ### Adding Data to Plots
 
@@ -226,12 +230,7 @@ Goal: resolve all these issues and document decisions in the appropiate parts of
 
 - `PlotMetrics`
     - How to handle the dimensions and locations of elements within the canvas? For example, where should `axes_pos` live? If it is a property of the `Axes` instance, how will `Title` be able to center itself above it?
-- Drawing and coordinates
-    - How to handle the different coordinate systems (Pygame / plot)? Mainly
-        - Is the coordinate conversion function (graph to pygame) a method of `PlotRenderer` or a separate function?
-        - Is the coordinate conversion called from elements or within the `PlotRenderer` based on a parameter?
-        - Should the draw surfaces be passed to the `PlotRenderer` or selected based on a parameter?
-    - **Coordinate input types**: Should `PlotRenderer` accept plain tuples, lists, and numpy arrays interchangeably, or enforce a single type for performance?
+
 
 - Structure
     - Should elements be aware of their parent canvas? Or should the parent canvas just call a draw method for all plot it's holding and pass the `PlotRenderer` object?
