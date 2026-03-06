@@ -27,6 +27,7 @@ Only start with implementation when the design file is ready!
 
 2. Refactor the current implementation of the `plots` module such that it is in line with-/supports the design decisions as described in this file.
     - General
+        - Proper typehinting with npt
         - Make sure that private attributes and methods are prefixed by an underscore.
         - Implement getters and setters for attributes with additional logic (instead deidcated methods like set_num_ticks
     - `PlotMetrics`

@@ -16,6 +16,7 @@ OLD
  
 """
 import numpy as np
+import numpy.typing as npt
 from .draw import PlotRenderer, PlotTheme
 from pygametools.color import Color
 from abc import ABC, abstractmethod
@@ -102,21 +103,21 @@ class PlotMetrics:
 
     # Top-level metrics and properties
     @property
-    def pos(self) -> np.ndarray:
+    def pos(self) -> npt.NDArray[np.int_]:
         return self._pos
     
     @pos.setter
-    def pos(self, value: np.ndarray):
-        self._pos = value
+    def pos(self, val: tuple[int, int]):
+        self._pos = val
         self.update_metrics(metric='pos')
     
     @property
-    def dim(self) -> np.ndarray:
+    def dim(self) -> npt.NDArray[np.int_]:
         return self._dim
     
     @dim.setter
-    def dim(self, value: np.ndarray):
-        self._dim = value
+    def dim(self, val: np.ndarray):
+        self._dim = val
         self.update_metrics(metric='dim')
     
     @property
@@ -124,9 +125,9 @@ class PlotMetrics:
         return self._xdom
     
     @xdom.setter
-    def xdom(self, value: np.ndarray):
-        assert value[0] < value[1], "Invalid x domain"
-        self._xdom = value
+    def xdom(self, val: np.ndarray):
+        assert val[0] < val[1], "Invalid x domain"
+        self._xdom = val
         self.update_metrics(metric='xdom')
 
     @property
@@ -134,9 +135,9 @@ class PlotMetrics:
         return self._ydom
     
     @ydom.setter
-    def ydom(self, value: np.ndarray):
-        assert value[0] < value[1], "Invalid y domain"
-        self._ydom = value
+    def ydom(self, val: np.ndarray):
+        assert val[0] < val[1], "Invalid y domain"
+        self._ydom = val
         self.update_metrics(metric='ydom')
 
     @property
@@ -144,8 +145,8 @@ class PlotMetrics:
         return self._axes_xpad
     
     @axes_xpad.setter
-    def axes_xpad(self, value: np.ndarray):
-        self._axes_xpad = value
+    def axes_xpad(self, val: np.ndarray):
+        self._axes_xpad = val
         self.update_metrics(metric='xpad')
 
     @property
@@ -153,8 +154,8 @@ class PlotMetrics:
         return self._axes_ypad
     
     @axes_ypad.setter
-    def axes_ypad(self, value: np.ndarray):
-        self._axes_ypad = value
+    def axes_ypad(self, val: np.ndarray):
+        self._axes_ypad = val
         self.update_metrics(metric='ypad')
 
     # Derived properties

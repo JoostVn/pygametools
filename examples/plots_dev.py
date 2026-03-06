@@ -44,7 +44,8 @@ class PlotTestApp(Application):
         return self._plot_xpos
     
     @plot_xpos.setter
-    def plot_xpos(self, val):  
+    def plot_xpos(self, val: int | float):  
+        val = int(val)
         self._plot_xpos = val
         old_pos = self.plot.metrics.pos
         self.plot.metrics.pos = (val, old_pos[1])
@@ -54,7 +55,8 @@ class PlotTestApp(Application):
         return self._plot_ypos
     
     @plot_ypos.setter
-    def plot_ypos(self, val):
+    def plot_ypos(self, val: int | float):
+        val = int(val)
         self._plot_ypos = val
         old_pos = self.plot.metrics.pos
         self.plot.metrics.pos = (old_pos[0], val)
@@ -64,7 +66,8 @@ class PlotTestApp(Application):
         return self._plot_xdim
     
     @plot_xdim.setter
-    def plot_xdim(self, val):
+    def plot_xdim(self, val: int | float):
+        val = int(val)
         self._plot_xdim = val
         old_dim = self.plot.metrics.dim
         self.plot.metrics.dim = (val, old_dim[1])
@@ -74,7 +77,8 @@ class PlotTestApp(Application):
         return self._plot_ydim
     
     @plot_ydim.setter
-    def plot_ydim(self, val):
+    def plot_ydim(self, val: int | float):
+        val = int(val)
         self._plot_ydim = val
         old_dim = self.plot.metrics.dim
         self.plot.metrics.dim = (old_dim[0], val)
@@ -84,9 +88,10 @@ class PlotTestApp(Application):
         return self._num_xticks
     
     @num_xticks.setter
-    def num_xticks(self, val):
-        self._num_xticks = int(val)
-        self.plot.axisx.set_num_ticks(self._num_xticks)
+    def num_xticks(self, val: int | float):
+        val = int(val)
+        self._num_xticks = val
+        self.plot.axisx.set_num_ticks(val)
     
     @property
     def num_yticks(self):
