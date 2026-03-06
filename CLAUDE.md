@@ -13,9 +13,10 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 2. ✅ Let Claude rewrite and clean up / error-check the design file a bit. (Also: dots after sentences, grammar, marking references to code/objects/attributes with ``, sentence structure, etc.)
 3. ✅ Further fill in the requirements with Claude; make sure any obvious additions in all lists are taken into account.
 4. ✅ Let Claude add additional design choices that have to be made.
-5. Find solutions for all design choices.
+5. ✅ Find solutions for all design choices.
 6. Make an ASCII figure of the `Canvas` class and all possible elements such as `Axes` and `Axis`.
-7. Make a high-level plan and decide on some design patterns such as OO vs. functional design with dataclasses.
+7. Clean-up and structure this documemt: check for reduntant parts, check for consistency across logic, groups sections if needed etc.
+8. Make a high-level plan and decide on some design patterns such as OO vs. functional design with dataclasses.
 
 ## TODO / implementation
 
@@ -90,25 +91,25 @@ Dependency flow (what holds a reference to what):
 
 ### Overview
 
-TODO: move to a table
+The `plots` module, for the most part, follows Matplotlib terminology.
 
-The `plots` module, for the most part, follows Matplotlib terminology. Objects are named as follows.
+| Object | Description |
+| --- | --- |
+| `Canvas` | Contains all other elements (Matplotlib: `Figure`). |
+| `Axes` | Area within a `Canvas` that contains the actual plots. |
+| `Axis` | The X- or Y-axis. X runs along the bottom border of `Axes`; Y runs along the left border. |
+| `Ticks` | Small lines that cross an axis to indicate scale and spacing. |
+| `Tick labels` | Numbers or strings to the left of (Y) or below (X) the axes. |
+| `Axis labels` | Single descriptive label per axis. |
+| `Title` | A single string title centered above the axes. |
+| `Legend` | Optionally shows the color and name of each plot element. |
+| `Grid` | Optional lines extending from ticks across the axes area. |
+| `PlotTheme` | Holds color and font configuration. |
+| `PlotRenderer` | Owns the two Pygame surfaces; sole drawing layer. |
+| `Element` | Abstract base class for all drawable plot elements. |
+| `LinePlot` / `ScatterPlot` / `BarPlot` / `ArrayPlot` | Concrete plot-data elements that hold data. |
 
-- `Canvas`: Contains all other elements (Matplotlib: `Figure`).
-- `Axes`: Area within a `Canvas` that contains the actual plots.
-- `Axis`: The X- and Y-axis of a plot. The X-axis runs along the bottom border of `Axes`; the Y-axis runs along the left border.
-- `Ticks`: Small lines that cross an axis to indicate scale and spacing.
-- `Tick labels`: Numbers or string labels to the left of (Y) or below (X) the axes.
-- `Axis labels`: Single labels for the X- and Y-axis.
-- `Title`: A single string title of the plot.
-- `Legend`: A legend that optionally contains the color and name of elements in the plot.
-- `Grid`: A grid that extends from ticks across the plot area.
-- `PlotTheme`: Holds color and font configuration for all elements.
-- `PlotRenderer`: Owns the two Pygame surfaces and is the single drawing layer responsible for coordinate conversion and all Pygame drawing calls.
-- `Element`: Abstract base class for all drawable plot elements (`Axes`, `Axis`, `Title`, `Legend`, …).
-- `LinePlot` / `ScatterPlot` / `BarPlot` / `ArrayPlot`: Concrete plot-data elements that live inside `Axes`.
-
-Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordinates.
+*Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordinates.*
 
 ### Canvas
 
@@ -208,28 +209,6 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 - Out-of-bounds data is clipped automatically by `surface_axes`; no per-point bounds checking is required.
 - Dynamic plots only need to be updated when their data or metrics change. Otherwise, `surface_canvas` is reblitted as it was in the previous tick.
 
-### Public Data API
-
-- on the surface, users interact only directly with:
-    - `Canvas`, which, at instantiation, also inits base elements such as `Title`, `Axes`, `PlotMetrics`, etc.
-    - Plots (such as `LinePlot`, `ScatterPlot`, etc.) that are added to the canvas with:
-
-    ```python
-    canvas.add_plot(plot)
-    ```
-
-- Attributes of other elements can be adjusted by accessing them from the `Canvas` objects:
-
-    ```pyhton
-    canvas.metrics.pos = (20, 30)
-    ```
-
-    - All public attributes of elements should be set/retreived with getters and setters.
-    - All private attributes should be prefixed with an underscore.
-
-
-> TODO: add more
-
 ## Supported Plot Types
 
 The following plot types will be supported:
@@ -238,11 +217,3 @@ The following plot types will be supported:
 - Bar plot.
 - Scatter plot.
 - 2D array plot (Matplotlib: `imshow`).
-
-## Questions / Design Choices
-
-Goal: resolve all these issues and document decisions in the appropriate parts of the documentation.
-
-
-
-
