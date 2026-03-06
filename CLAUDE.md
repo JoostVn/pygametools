@@ -14,7 +14,7 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 3. ✅ Further fill in the requirements with Claude; make sure any obvious additions in all lists are taken into account.
 4. ✅ Let Claude add additional design choices that have to be made.
 5. ✅ Find solutions for all design choices.
-6. Make an ASCII figure of the `Canvas` class and all possible elements such as `Axes` and `Axis`.
+6. ✅ Make an ASCII figure of the `Canvas` class and all possible elements such as `Axes` and `Axis`.
 7. Clean-up and structure this documemt: check for reduntant parts, check for consistency across logic, groups sections if needed etc.
 8. Make a high-level plan and decide on some design patterns such as OO vs. functional design with dataclasses.
 
@@ -110,6 +110,27 @@ The `plots` module, for the most part, follows Matplotlib terminology.
 | `LinePlot` / `ScatterPlot` / `BarPlot` / `ArrayPlot` | Concrete plot-data elements that hold data. |
 
 *Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordinates.*
+
+### Layout
+
+```text
+┌──────────────────────────────────────────────┐ 
+│Canvas                    Title               │ 
+│                ┌─────┬─────┬─────┬─────────┐ │ 
+│yticks/labels 4─┤Axes ┼─ ─ ─┼─ ─ ─┼ ┌──────┐│ │ 
+│                │                   │Legend││ │ 
+│              3─┤     │     │     │ │      ││ │ 
+│                │            Grid   └───┬──┘│ │ 
+│ylabel        2─┤ ─ ─ ┼─ ─ ─┼─ ─ ─┼─ ─ ─┼── │ │ 
+│                │                           │ │ 
+│              1─┤yaxis│     │     │     │   │ │ 
+│                │     xaxis                 │ │ 
+│              0─┼──┬──┬──┬──┬──┬──┬──┬──┬───┘ │ 
+│                0  1  2  3  4  5  6  7  8  9  │ 
+│                       xticks/labels          │ 
+│                           xlabel             │ 
+└──────────────────────────────────────────────┘ 
+```
 
 ### Canvas
 
