@@ -123,79 +123,79 @@ class PlotMetrics:
         self.update_metrics(metric='dim')
     
     @property
-    def xdom(self) -> npt.NDArray[np.int_]:
+    def xdom(self) -> npt.NDArray[np.float64]:
         return self._xdom
-    
+
     @xdom.setter
-    def xdom(self, val: np.ndarray):
+    def xdom(self, val: tuple[float, float]):
         assert val[0] < val[1], "Invalid x domain"
-        self._xdom = val
+        self._xdom = np.array(val, dtype=float)
         self.update_metrics(metric='xdom')
 
     @property
-    def ydom(self) -> np.ndarray:
+    def ydom(self) -> npt.NDArray[np.float64]:
         return self._ydom
-    
+
     @ydom.setter
-    def ydom(self, val: np.ndarray):
+    def ydom(self, val: tuple[float, float]):
         assert val[0] < val[1], "Invalid y domain"
-        self._ydom = val
+        self._ydom = np.array(val, dtype=float)
         self.update_metrics(metric='ydom')
 
     @property
-    def axes_xpad(self) -> np.ndarray:
+    def axes_xpad(self) -> npt.NDArray[np.int_]:
         return self._axes_xpad
-    
+
     @axes_xpad.setter
-    def axes_xpad(self, val: np.ndarray):
-        self._axes_xpad = val
+    def axes_xpad(self, val: CoordinatePair):
+        self._axes_xpad = np.array(val, dtype=int)
         self.update_metrics(metric='xpad')
 
     @property
-    def axes_ypad(self) -> np.ndarray:
+    def axes_ypad(self) -> npt.NDArray[np.int_]:
         return self._axes_ypad
-    
+
     @axes_ypad.setter
-    def axes_ypad(self, val: np.ndarray):
-        self._axes_ypad = val
+    def axes_ypad(self, val: CoordinatePair):
+        self._axes_ypad = np.array(val, dtype=int)
         self.update_metrics(metric='ypad')
 
     # Derived properties
     @property
     def xdom_span(self) -> float:
         return np.diff(self._xdom)[0]
-    
+
     @property
     def ydom_span(self) -> float:
         return np.diff(self._ydom)[0]
-    
-    @property
-    def axes_pos(self) -> np.ndarray:
-        """Position of the axis in pygame coordinates on the Canvas surface."""
-        return np.hstack([self._axes_xpad[0], self._axes_ypad[0]]) 
 
     @property
-    def axes_dim(self) -> np.ndarray:
-        """Dimensions of the axes in pygame coordinates."""
-        return self.dim - np.hstack([self._axes_xpad.sum(), self._axes_ypad.sum()]) 
-    
+    def axes_pos(self) -> npt.NDArray[np.int_]:
+        """Position of the axis in pygame coordinates on the Canvas surface."""
+        return np.hstack([self._axes_xpad[0], self._axes_ypad[0]])
+
     @property
-    def axes_nw(self) -> np.ndarray:
+    def axes_dim(self) -> npt.NDArray[np.int_]:
+        """Dimensions of the axes in pygame coordinates."""
+        return self.dim - np.hstack([self._axes_xpad.sum(), self._axes_ypad.sum()])
+
+    @property
+    def axes_nw(self) -> npt.NDArray[np.int_]:
         """NW point of axes on Canvas surface in pygame coordinates"""
         return self.axes_pos
-    
+
     @property
-    def axes_sw(self) -> np.ndarray:
+    def axes_sw(self) -> npt.NDArray[np.int_]:
         """SW point of axes on Canvas surface in pygame coordinates"""
         return self.axes_pos + [0, self.axes_dim[1]]
-    
+
     @property
-    def axes_ne(self) -> np.ndarray:
+    def axes_ne(self) -> npt.NDArray[np.int_]:
         """NE point of axes on Canvas surface in pygame coordinates"""
         return self.axes_pos + [self.axes_dim[0], 0]
-    
+
     @property
-    def axes_se(self) -> np.ndarray:
+    def axes_se(self) -> npt.NDArray[np.int_]:
         """SE point of axes on Canvas surface in pygame coordinates"""
         return self.axes_pos + self.axes_dim
 
