@@ -46,11 +46,15 @@ Only start with implementation when the design file is ready!
         - Remove any `PlotMetrics` reference from all `Element` subclasses; receive it as a parameter in `on_metrics_changed`.
         - Remove coupling between `Element` and `Canvas` / `PlotRenderer`: update and draw functions receive only the data they need as arguments.
 
+2. Make sure the dosctrings of methods and classes reflect key rules and decision choices (only when not obvious from the code!)
+
 3. Implement domain auto-expansion.
     - In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
     - Implement `Canvas._check_domain_expansion(x, y)` that updates `metrics.xdom` / `metrics.ydom` when new data falls outside the current domain.
 
-4. Improve the test/example script `examples\plots_dev.py` with dynamic and static data for plots such has:
+4. Add the first two plot types: line and scatter.
+
+5. Improve the test/example script `examples\plots_dev.py` with dynamic and static data for plots such has:
     - Randomwalks (dynamic line)
     - Double dice throw (dynamic bar)
     - gif (dynamic array)
@@ -73,7 +77,6 @@ Canvas
 ├── Legend
 ├── Grid
 └── [XAxis | YAxis]
-    └── Ticks
 ```
 
 Dependency flow (what holds a reference to what):
@@ -140,7 +143,8 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 
 - The `Legend` element auto-populates from plot objects registered with the `Axes`.
 - Each plot element provides a color swatch and a name string to the legend.
-- The legend can be positioned at a fixed corner of the `Axes`, or hidden.
+- The legend can be positioned at a fixed corner of the `Axes` (inside or outside), or hidden.
+- The legend has no dedicated surface. It is drawn on `surface_canvas` after `surface_axes` is blitted, so it appears on top of plot data regardless of position.
 
 ### Grid
 
@@ -166,16 +170,21 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 - `PlotMetrics` holds a single `_on_change: Callable[[str], None]` callback to `Canvas`. When any metric changes, it calls this callback with the name of the changed metric.
 - `Canvas` acts as the mediator: on receiving the notification, it calls `on_metrics_changed(metric_name, metrics)` on all registered `Element` instances so they can recompute their layout.
 - Each `Element` receives the metric name and the `PlotMetrics` instance as arguments — elements hold no permanent reference to `PlotMetrics`.
+- `PlotMetrics` holds only high-level shared layout data that multiple elements need. Element-specific config (e.g. title padding, tick length) lives as attributes on the element itself. `PlotTheme` holds colors and fonts only.
 
 #### List of metrics
 
 - `pos`: The `(X, Y)` position of the `Canvas` on the top-level Pygame screen, in Pygame coordinates.
 - `dim`: The `(X, Y)` dimensions of the `Canvas` in Pygame coordinates.
+- `axes_padding`: Pixel margins reserved around the axes area, as `(top, right, bottom, left)`.
+- `axes_pos`: Computed property — top-left of the axes area in canvas coordinates, derived from `axes_padding`.
+- `axes_dim`: Computed property — size of the axes area, derived from `dim` and `axes_padding`.
 - `xdom` / `ydom`: The domain of a plot along each axis, in plot coordinates.
 
 ### Theming
 
-- All colors and fonts are defined in a `PlotTheme` object attached to the `Canvas`.
+- Colors and fonts are defined in a `PlotTheme` object attached to the `Canvas`.
+- `PlotTheme` holds only shared visual style — colors and fonts. Element-specific sizing and spacing (e.g. `canvas.title.padding`, `canvas.xaxis.tick_length`) are attributes on the element itself.
 
 ### Drawing
 
@@ -185,6 +194,12 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
     - Canvas coordinates: Pygame coordinates relative to the top-left of `surface_canvas`.
     - Graph coordinates: Coordinates relative to the X/Y domains of `Axes`. Used only when drawing plot data onto `surface_axes`.
 - `PlotRenderer` exposes two families of drawing methods — one per coordinate system (e.g. `draw_line_canvas` / `draw_line_graph`). Elements call the appropriate family and pass raw coordinates; `PlotRenderer` handles conversion and surface selection internally. Elements never call a coordinate conversion function directly.
+- Frame render order:
+    1. draw grid and plot data onto `surface_axes`.
+    2. draw chrome elements (border, ticks, labels, title) onto `surface_canvas`.
+    3. blit `surface_axes` onto `surface_canvas`.
+    4. draw legend onto `surface_canvas`.
+    5. blit `surface_canvas` to screen. This ensures the legend always appears above plot data.
 
 ### Adding Data to Plots
 
@@ -226,14 +241,8 @@ The following plot types will be supported:
 
 ## Questions / Design Choices
 
-Goal: resolve all these issues and document decisions in the appropiate parts of the documentation
-
-- `PlotMetrics`
-    - How to handle the dimensions and locations of elements within the canvas? For example, where should `axes_pos` live? If it is a property of the `Axes` instance, how will `Title` be able to center itself above it?
+Goal: resolve all these issues and document decisions in the appropriate parts of the documentation.
 
 
-- Structure
-    - Should elements be aware of their parent canvas? Or should the parent canvas just call a draw method for all plot it's holding and pass the `PlotRenderer` object?
 
-- Other
-    - Should the plot legend have its own surface?
+
