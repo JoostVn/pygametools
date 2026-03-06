@@ -7,17 +7,6 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 - Plotting the genomes of a whole population in a genetic algorithm as a grayscale 2D array.
 - Plotting the accuracy of a neural network as it is optimized over different iterations.
 
-## TODO / plot_design file
-
-1. ✅ Go through files and fill the lists of requirements.
-2. ✅ Let Claude rewrite and clean up / error-check the design file a bit. (Also: dots after sentences, grammar, marking references to code/objects/attributes with ``, sentence structure, etc.)
-3. ✅ Further fill in the requirements with Claude; make sure any obvious additions in all lists are taken into account.
-4. ✅ Let Claude add additional design choices that have to be made.
-5. ✅ Find solutions for all design choices.
-6. ✅ Make an ASCII figure of the `Canvas` class and all possible elements such as `Axes` and `Axis`.
-7. Clean-up and structure this documemt: check for reduntant parts, check for consistency across logic, groups sections if needed etc.
-8. Make a high-level plan and decide on some design patterns such as OO vs. functional design with dataclasses.
-
 ## TODO / implementation
 
 Only start with implementation when the design file is ready!
