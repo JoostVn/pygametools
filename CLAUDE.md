@@ -31,31 +31,35 @@ Only start with implementation when the design file is ready!
         - Proper typehinting with npt.
         - Make sure that private attributes and methods are prefixed by an underscore.
         - Implement getters and setters for attributes with additional logic (instead of dedicated methods like `set_num_ticks`).
+    - `DrawContext`
+        - Implement `DrawContext` as a simple dataclass holding `renderer: PlotRenderer`, `metrics: PlotMetrics`, `theme: PlotTheme`.
+        - Instantiate it once in `Canvas.__init__`
+
     - `PlotMetrics`
         - Remove all `Element` references from `PlotMetrics`; replace with a single `_on_change: Callable[[str], None]` callback to `Canvas`.
         - Add `Canvas._on_metrics_changed(metric_name: str)` as the mediator method that propagates changes to all registered elements.
         - Add `on_metrics_changed(metric_name: str, metrics: PlotMetrics)` to the `Element` abstract base class.
         - Register all elements with `Canvas` (not `PlotMetrics`) at construction time.
         - Consistent location for any element-specific metric (such as axes padding, title size, legend size, etc.).
+
     - `PlotRenderer`
-        - Pass `PlotRenderer` to elements as a method argument for drawing (elements do not hold a permanent reference).
         - Implement two draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates.
         - Implement `_graph_to_canvas(pos, metrics) -> tuple[int, int]` as a private method on `PlotRenderer`.
         - Surface selection is internal to `PlotRenderer`: canvas-coord methods draw to `surface_canvas`; graph-coord methods convert and draw to `surface_axes`.
         - Enforce strict input types: `tuple[int, int]` for individual positions, `npt.NDArray[np.float64]` for bulk data. No implicit conversion.
     - `Elements`
         - Remove any `PlotMetrics` reference from all `Element` subclasses; receive it as a parameter in `on_metrics_changed`.
-        - Remove coupling between `Element` and `Canvas` / `PlotRenderer`: update and draw functions receive only the data they need as arguments.
+        - Remove coupling between `Element` and `Canvas` / `PlotRenderer`: draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
 
-2. Make sure the dosctrings of methods and classes reflect key rules and decision choices (only when not obvious from the code!)
+3. Make sure the docstrings of methods and classes reflect key rules and design decisions (only when not obvious from the code).
 
-3. Implement domain auto-expansion.
+4. Implement domain auto-expansion.
     - In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
     - Implement `Canvas._check_domain_expansion(x, y)` that updates `metrics.xdom` / `metrics.ydom` when new data falls outside the current domain.
 
-4. Add the first two plot types: line and scatter.
+5. Add the first two plot types: line and scatter.
 
-5. Improve the test/example script `examples\plots_dev.py` with dynamic and static data for plots such has:
+6. Improve the test/example script `examples\plots_dev.py` with dynamic and static data for plots such as:
     - Randomwalks (dynamic line)
     - Double dice throw (dynamic bar)
     - gif (dynamic array)
@@ -66,26 +70,26 @@ Only start with implementation when the design file is ready!
 
 ```text
 Canvas
-├── PlotMetrics          (_on_change callback → Canvas only)
-├── PlotRenderer
-│   ├── surface_canvas
-│   └── surface_axes
-├── PlotTheme
+├── DrawContext
+│   ├── PlotMetrics
+│   ├── PlotTheme
+│   └── PlotRenderer
+│       ├── surface_canvas
+│       └── surface_axes
 ├── Axes
-│   └── [LinePlot | ScatterPlot | BarPlot | ArrayPlot]
-│       └── (_on_data_added callback → Canvas only)
 ├── Title
 ├── Legend
 ├── Grid
 └── [XAxis | YAxis]
+└── [LinePlot | ScatterPlot | BarPlot | ArrayPlot]
 ```
 
 Dependency flow (what holds a reference to what):
 
-- `Canvas` → `PlotMetrics`, `PlotRenderer`, `PlotTheme`, all `Element` instances
+- `Canvas` → `PlotMetrics`, `PlotRenderer`, `PlotTheme`, `DrawContext`, all `Element` instances
 - `PlotMetrics` → `Canvas` (via `_on_change` callback only)
 - Plot-data elements → `Canvas` (via `_on_data_added` callback only)
-- All other `Element` subclasses → nothing (receive `PlotMetrics` and `PlotRenderer` as method arguments only)
+- All other `Element` subclasses → nothing (receive `DrawContext` as a method argument for draw calls; receive `PlotMetrics` as a method argument for `on_metrics_changed`)
 
 ## Objects and Terminology
 
@@ -98,14 +102,15 @@ The `plots` module, for the most part, follows Matplotlib terminology.
 | `Canvas` | Contains all other elements (Matplotlib: `Figure`). |
 | `Axes` | Area within a `Canvas` that contains the actual plots. |
 | `Axis` | The X- or Y-axis. X runs along the bottom border of `Axes`; Y runs along the left border. |
-| `Ticks` | Small lines that cross an axis to indicate scale and spacing. |
-| `Tick labels` | Numbers or strings to the left of (Y) or below (X) the axes. |
+| Ticks | Small lines that cross an axis to indicate scale and spacing. Implemented within `Axis`, not a separate class. |
+| Tick labels | Numbers or strings to the left of (Y) or below (X) the axes. Implemented within `Axis`, not a separate class. |
 | `Axis labels` | Single descriptive label per axis. |
 | `Title` | A single string title centered above the axes. |
 | `Legend` | Optionally shows the color and name of each plot element. |
 | `Grid` | Optional lines extending from ticks across the axes area. |
 | `PlotTheme` | Holds color and font configuration. |
 | `PlotRenderer` | Owns the two Pygame surfaces; sole drawing layer. |
+| `DrawContext` | Lightweight dataclass bundling `PlotRenderer`, `PlotMetrics`, and `PlotTheme`. Passed to element draw calls so elements need no permanent references to any of the three. |
 | `Element` | Abstract base class for all drawable plot elements. |
 | `LinePlot` / `ScatterPlot` / `BarPlot` / `ArrayPlot` | Concrete plot-data elements that hold data. |
 
@@ -143,7 +148,7 @@ The `plots` module, for the most part, follows Matplotlib terminology.
 - A `Canvas` always contains a single `Axes` object.
 - Plot data is drawn onto `surface_axes`. Because plot data is drawn on a separate surface, out-of-bounds data is clipped automatically without any per-point bounds checking.
 
-### Axis Lines and Ticks
+### Axis and ticks
 
 - The X-axis line runs along the bottom border of `Axes`; the Y-axis line runs along the left border. Axis lines do not move with the domain.
 - An `Axis` supports two tick modes:
@@ -172,7 +177,7 @@ The `plots` module, for the most part, follows Matplotlib terminology.
 
 - `Grid` is an optional element that extends tick positions as horizontal/vertical lines across the `Axes`.
 - Grid lines are drawn before plot data so they appear behind the data.
-- Grid visibility and style (color, line width) are configurable via `PlotTheme`.
+- Grid color is part of `PlotTheme`.
 
 ## Functional Requirements
 
@@ -215,7 +220,8 @@ The `plots` module, for the most part, follows Matplotlib terminology.
 - Drawing is done in two different coordinate systems:
     - Canvas coordinates: Pygame coordinates relative to the top-left of `surface_canvas`.
     - Graph coordinates: Coordinates relative to the X/Y domains of `Axes`. Used only when drawing plot data onto `surface_axes`.
-- `PlotRenderer` exposes two families of drawing methods — one per coordinate system (e.g. `draw_line_canvas` / `draw_line_graph`). Elements call the appropriate family and pass raw coordinates; `PlotRenderer` handles conversion and surface selection internally. Elements never call a coordinate conversion function directly.
+- `Canvas` creates a `DrawContext` at init, holding references to `PlotRenderer`, `PlotMetrics`, and `PlotTheme`. It is passed as a single argument to all element draw calls: `element.draw(ctx)`.
+- `PlotRenderer` exposes two families of drawing methods — one per coordinate system (e.g. `draw_line_canvas` / `draw_line_graph`). Elements access the renderer via `ctx.renderer`, call the appropriate family, and pass raw coordinates; `PlotRenderer` handles conversion and surface selection internally. Elements never call a coordinate conversion function directly.
 - Frame render order:
     1. draw grid and plot data onto `surface_axes`.
     2. draw chrome elements (border, ticks, labels, title) onto `surface_canvas`.
