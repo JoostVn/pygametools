@@ -27,28 +27,57 @@ Only start with implementation when the design file is ready!
 
 2. Refactor the current implementation of the `plots` module such that it is in line with-/supports the design decisions as described in this file.
     - General
-        - Proper typehinting with npt
+        - Proper typehinting with npt.
         - Make sure that private attributes and methods are prefixed by an underscore.
-        - Implement getters and setters for attributes with additional logic (instead deidcated methods like set_num_ticks
+        - Implement getters and setters for attributes with additional logic (instead of dedicated methods like `set_num_ticks`).
     - `PlotMetrics`
-        - Consequent location for any element-specific metric (such as axes padding, title size, legend size etc.)
-        - Order of operations in metric updates (what updates what?)
-        - Make it easy to change dimensions from `Canvas` without having to type `canvas.metrics.dim = ...` each time.
-        - 
+        - Remove all `Element` references from `PlotMetrics`; replace with a single `_on_change: Callable[[str], None]` callback to `Canvas`.
+        - Add `Canvas._on_metrics_changed(metric_name: str)` as the mediator method that propagates changes to all registered elements.
+        - Add `on_metrics_changed(metric_name: str, metrics: PlotMetrics)` to the `Element` abstract base class.
+        - Register all elements with `Canvas` (not `PlotMetrics`) at construction time.
+        - Consistent location for any element-specific metric (such as axes padding, title size, legend size, etc.).
     - `PlotRenderer`
-        - Pass to elements for drawing or have elements hold a reference to the instance itself.
+        - Pass `PlotRenderer` to elements as a method argument for drawing (elements do not hold a permanent reference).
     - `Elements`
-        - Remove coupling between `Element` and each parent `Canvas`: they shouldn't be aware of the `PlotRenderer` and `Canvas` objects. Any update and draw functions should just reveive the required data.
-        - TODO: does this make sense?
+        - Remove any `PlotMetrics` reference from all `Element` subclasses; receive it as a parameter in `on_metrics_changed`.
+        - Remove coupling between `Element` and `Canvas` / `PlotRenderer`: update and draw functions receive only the data they need as arguments.
 
-> ADD INTERMEDIATE STEPS
+3. Implement domain auto-expansion.
+    - In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
+    - Implement `Canvas._check_domain_expansion(x, y)` that updates `metrics.xdom` / `metrics.ydom` when new data falls outside the current domain.
 
-99. Improve the test/example script `examples\plots_dev.py` with dynamic and static data for plots such has:
+4. Improve the test/example script `examples\plots_dev.py` with dynamic and static data for plots such has:
     - Randomwalks (dynamic line)
     - Double dice throw (dynamic bar)
     - gif (dynamic array)
     - test image (static array)
     - normal distribution draws (dynamic scatter plot)
+
+## Dependency Tree
+
+```text
+Canvas
+├── PlotMetrics          (_on_change callback → Canvas only)
+├── PlotRenderer
+│   ├── surface_canvas
+│   └── surface_axes
+├── PlotTheme
+├── Axes
+│   └── [LinePlot | ScatterPlot | BarPlot | ArrayPlot]
+│       └── (_on_data_added callback → Canvas only)
+├── Title
+├── Legend
+├── Grid
+└── [XAxis | YAxis]
+    └── Ticks
+```
+
+Dependency flow (what holds a reference to what):
+
+- `Canvas` → `PlotMetrics`, `PlotRenderer`, `PlotTheme`, all `Element` instances
+- `PlotMetrics` → `Canvas` (via `_on_change` callback only)
+- Plot-data elements → `Canvas` (via `_on_data_added` callback only)
+- All other `Element` subclasses → nothing (receive `PlotMetrics` and `PlotRenderer` as method arguments only)
 
 ## Objects and Terminology
 
@@ -130,8 +159,9 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 ### PlotMetrics
 
 - The dimensions and domains of a `Canvas` object are stored in the `PlotMetrics` dataclass.
-- When any metric changes, `PlotMetrics` notifies all registered `Element` instances so they can recompute their layout.
-- Each `Element` receives the name of the changed metric, allowing it to skip recomputation for unrelated metrics.
+- `PlotMetrics` holds a single `_on_change: Callable[[str], None]` callback to `Canvas`. When any metric changes, it calls this callback with the name of the changed metric.
+- `Canvas` acts as the mediator: on receiving the notification, it calls `on_metrics_changed(metric_name, metrics)` on all registered `Element` instances so they can recompute their layout.
+- Each `Element` receives the metric name and the `PlotMetrics` instance as arguments — elements hold no permanent reference to `PlotMetrics`.
 
 #### List of metrics
 
@@ -155,6 +185,7 @@ Note: Graph coordinates are Y-reversed and scaled with respect to Pygame coordin
 ### Adding Data to Plots
 
 - When data is added to a plot, it is stored within that plot object.
+- When data is added, the plot fires an `_on_data_added` callback registered by `Canvas.add_plot()`. `Canvas` then calls `_check_domain_expansion(x, y)` and updates `metrics.xdom` / `metrics.ydom` if the new data falls outside the current domain.
 - Out-of-bounds data is clipped automatically by `surface_axes`; no per-point bounds checking is required.
 - Dynamic plots only need to be updated when their data or metrics change. Otherwise, `surface_canvas` is reblitted as it was in the previous tick.
 
@@ -191,12 +222,10 @@ The following plot types will be supported:
 
 ## Questions / Design Choices
 
+Goal: resolve all these issues and document decisions in the appropiate parts of the documentation
+
 - `PlotMetrics`
-    - In the current configuration, `PlotMetrics` holds all objects / elements it must update. But, each element also holds a referencem to `PlotMetrics` because they need it for their own logic. Is this circle reference a problem? If yes, fix.
-    - **Observer pattern scope**: `PlotMetrics` currently notifies all elements. Should plot-data elements (`LinePlot`, etc.) also register directly with `PlotMetrics`, or should `Axes` be responsible for propagating metric changes to its child plots?
-    - Should `PlotMetrics` be responsible for update calls to other elements?
-    - How to handle the dimensions and locations of elements within the canvas? For example, where should the axes pos live? If they are a property of the `Axes` instance, how will the `Title` be able to center itself above it?
-    - There should be support for automatically updating xdom/ydom when adding new data if that new data is out of bounds of the current domains. Where should that logic live?
+    - How to handle the dimensions and locations of elements within the canvas? For example, where should `axes_pos` live? If it is a property of the `Axes` instance, how will `Title` be able to center itself above it?
 - Drawing and coordinates
     - How to handle the different coordinate systems (Pygame / plot)? Mainly
         - Is the coordinate conversion function (graph to pygame) a method of `PlotRenderer` or a separate function?
