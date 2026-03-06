@@ -11,49 +11,54 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 
 Only start with implementation when the design file is ready!
 
-0. Salvage the old `plotting` module for usefol code (such as the color preview)
-1. Improve the test/example script `examples\plots_dev.py`:
-    - GUI sliders for plot metrics for easy testing
+0. Salvage the old `plotting` module for useful code (such as the color preview).
 
-2. Refactor the current implementation of the `plots` module such that it is in line with-/supports the design decisions as described in this file.
+1. Refactor the current implementation of the `plots` module to match the design decisions in this file.
     - General
-        - Proper typehinting with npt.
+        - Proper typehinting with `npt`.
         - Make sure that private attributes and methods are prefixed by an underscore.
         - Implement getters and setters for attributes with additional logic (instead of dedicated methods like `set_num_ticks`).
     - `DrawContext`
         - Implement `DrawContext` as a simple dataclass holding `renderer: PlotRenderer`, `metrics: PlotMetrics`, `theme: PlotTheme`.
-        - Instantiate it once in `Canvas.__init__`
-
+        - Instantiate it once in `Canvas.__init__`.
     - `PlotMetrics`
         - Remove all `Element` references from `PlotMetrics`; replace with a single `_on_change: Callable[[str], None]` callback to `Canvas`.
         - Add `Canvas._on_metrics_changed(metric_name: str)` as the mediator method that propagates changes to all registered elements.
         - Add `on_metrics_changed(metric_name: str, metrics: PlotMetrics)` to the `Element` abstract base class.
         - Register all elements with `Canvas` (not `PlotMetrics`) at construction time.
-        - Consistent location for any element-specific metric (such as axes padding, title size, legend size, etc.).
-
     - `PlotRenderer`
+        - Remove `parent_canvas` reference; `PlotRenderer.__init__` takes `dim` and `axes_dim` directly. Canvas calls `pr.resize(dim, axes_dim)` when metrics change.
         - Implement two draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates.
         - Implement `_graph_to_canvas(pos, metrics) -> tuple[int, int]` as a private method on `PlotRenderer`.
         - Surface selection is internal to `PlotRenderer`: canvas-coord methods draw to `surface_canvas`; graph-coord methods convert and draw to `surface_axes`.
         - Enforce strict input types: `tuple[int, int]` for individual positions, `npt.NDArray[np.float64]` for bulk data. No implicit conversion.
+    - `Canvas`
+        - Replace the hardcoded draw list in `Canvas.draw()` with a proper element registry (`_elements: list[Element]`).
     - `Elements`
+        - Remove `parent_canvas` reference from `Element` and all subclasses.
         - Remove any `PlotMetrics` reference from all `Element` subclasses; receive it as a parameter in `on_metrics_changed`.
-        - Remove coupling between `Element` and `Canvas` / `PlotRenderer`: draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
+        - Draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
 
-3. Make sure the docstrings of methods and classes reflect key rules and design decisions (only when not obvious from the code).
+2. Implement `Grid` element.
 
-4. Implement domain auto-expansion.
+3. Complete `Legend` element (stub exists).
+
+4. Add `LinePlot` and `ScatterPlot` plot types.
+
+5. Implement domain auto-expansion.
     - In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
     - Implement `Canvas._check_domain_expansion(x, y)` that updates `metrics.xdom` / `metrics.ydom` when new data falls outside the current domain.
 
-5. Add the first two plot types: line and scatter.
+6. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
 
-6. Improve the test/example script `examples\plots_dev.py` with dynamic and static data for plots such as:
-    - Randomwalks (dynamic line)
-    - Double dice throw (dynamic bar)
-    - gif (dynamic array)
-    - test image (static array)
-    - normal distribution draws (dynamic scatter plot)
+7. Improve the test/example script `examples\plots_dev.py`:
+    - GUI sliders for plot metrics for easy testing.
+    - Dynamic and static data examples:
+        - Random walk (dynamic line)
+        - Double dice throw (dynamic bar)
+        - GIF (dynamic array)
+        - Test image (static array)
+        - Normal distribution draws (dynamic scatter)
 
 ## Dependency Tree
 
@@ -192,9 +197,10 @@ The `plots` module, for the most part, follows Matplotlib terminology.
 
 - `pos`: The `(X, Y)` position of the `Canvas` on the top-level Pygame screen, in Pygame coordinates.
 - `dim`: The `(X, Y)` dimensions of the `Canvas` in Pygame coordinates.
-- `axes_padding`: Pixel margins reserved around the axes area, as `(top, right, bottom, left)`.
-- `axes_pos`: Computed property — top-left of the axes area in canvas coordinates, derived from `axes_padding`.
-- `axes_dim`: Computed property — size of the axes area, derived from `dim` and `axes_padding`.
+- `axes_xpad`: Horizontal pixel margins around the axes area, as `(left, right)`.
+- `axes_ypad`: Vertical pixel margins around the axes area, as `(top, bottom)`.
+- `axes_pos`: Computed property — top-left of the axes area in canvas coordinates, derived from `axes_xpad` and `axes_ypad`.
+- `axes_dim`: Computed property — size of the axes area, derived from `dim`, `axes_xpad`, and `axes_ypad`.
 - `xdom` / `ydom`: The domain of a plot along each axis, in plot coordinates.
 
 ### Theming
