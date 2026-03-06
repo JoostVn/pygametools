@@ -2,12 +2,9 @@
 """
 Development testing for plots (plotting 2) module
 
-
 TODO:
  - Sliders for other metrics such as axes padding
  - checkboxes for plot types (all in the same plot)
- - 
-
 """
 
 from pygametools.plots.elements import Canvas

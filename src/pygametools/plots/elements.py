@@ -17,6 +17,8 @@ OLD
 """
 import numpy as np
 import numpy.typing as npt
+
+from pygametools.plots.types import CoordinatePair
 from .draw import PlotRenderer, PlotTheme
 from pygametools.color import Color
 from abc import ABC, abstractmethod
@@ -67,22 +69,22 @@ class PlotMetrics:
 
     def __init__(
             self, 
-            pos: tuple[int, int], 
-            dim: tuple[int, int], 
-            xdom: tuple[float, float],
-            ydom: tuple[float, float], 
-            axes_xpad: tuple[int, int]=(30,10), 
-            axes_ypad: tuple[int, int]=(30,20)):
+            pos: CoordinatePair, 
+            dim: CoordinatePair, 
+            xdom: CoordinatePair,
+            ydom: CoordinatePair, 
+            axes_xpad: CoordinatePair=(30,10), 
+            axes_ypad: CoordinatePair=(30,20)):
         
         assert xdom[0] < xdom[1], "Invalid x domain"
         assert ydom[0] < ydom[1], "Invalid y domain"
 
-        self._pos = np.array(pos)
-        self._dim = np.array(dim) 
-        self._xdom = np.array(xdom) 
-        self._ydom = np.array(ydom) 
-        self._axes_xpad = np.array(axes_xpad)
-        self._axes_ypad = np.array(axes_ypad)
+        self._pos = np.array(pos, dtype=int)
+        self._dim = np.array(dim, dtype=int) 
+        self._xdom = np.array(xdom, dtype=float) 
+        self._ydom = np.array(ydom, dtype=float) 
+        self._axes_xpad = np.array(axes_xpad, dtype=int)
+        self._axes_ypad = np.array(axes_ypad, dtype=int)
 
         # List of objects to notify on changes
         self._notify_objects = []  
@@ -107,8 +109,8 @@ class PlotMetrics:
         return self._pos
     
     @pos.setter
-    def pos(self, val: tuple[int, int]):
-        self._pos = val
+    def pos(self, val: CoordinatePair):
+        self._pos = np.array(val, dtype=int)
         self.update_metrics(metric='pos')
     
     @property
@@ -116,12 +118,12 @@ class PlotMetrics:
         return self._dim
     
     @dim.setter
-    def dim(self, val: np.ndarray):
-        self._dim = val
+    def dim(self, val: CoordinatePair):
+        self._dim = np.array(val, dtype=int)
         self.update_metrics(metric='dim')
     
     @property
-    def xdom(self) -> np.ndarray:
+    def xdom(self) -> npt.NDArray[np.int_]:
         return self._xdom
     
     @xdom.setter

@@ -9,39 +9,38 @@ The `plots` module is a redo of the original `plotting` module that supports bot
 
 ## TODO / implementation
 
-Only start with implementation when the design file is ready!
+All points apply only to the `src\pygametools\plots` module. The current module will require a substantial refactor after which new features will be added. The steps to achieve this are listed below.
 
-0. Salvage the old `plotting` module for useful code (such as the color preview).
+Any change in `src\pygametools\plots` should also be reflected in the test file `examples\plots_dev.py`.
 
-1. Refactor the current implementation of the `plots` module to match the design decisions in this file.
-    - General
-        - Proper typehinting with `npt`.
-        - Make sure that private attributes and methods are prefixed by an underscore.
-        - Implement getters and setters for attributes with additional logic (instead of dedicated methods like `set_num_ticks`).
-    - `DrawContext`
-        - Implement `DrawContext` as a simple dataclass holding `renderer: PlotRenderer`, `metrics: PlotMetrics`, `theme: PlotTheme`.
-        - Instantiate it once in `Canvas.__init__`.
-    - `PlotMetrics`
+Some general formatting rules to keep in mind during the refactor:
+
+- Proper typehinting with `npt`.
+- Make sure that private attributes and methods are prefixed by an underscore.
+- Implement getters and setters for attributes with additional logic (instead of dedicated methods like `set_num_ticks`).
+
+1. `DrawContext` class and module
+    - Implement `DrawContext` as a simple dataclass holding `renderer: PlotRenderer`, `metrics: PlotMetrics`, `theme: PlotTheme`.
+    - Move DrawContext, PlotRenderer, PlotMetrics, PlotTheme to their own module (draw_context.py).
+    - Import all classes in `elements.py`
+    - Instantiate `DrawContext` once in `Canvas.__init__`.
+
+2. Metrics and elements
+    - Register all elements with `Canvas` (not `PlotMetrics`) at construction time.
+    - Replace the hardcoded draw list in `Canvas.draw()` with a proper element registry (`_elements: list[Element]`).
+    - Implement metric change methods:
+        - Add `on_metrics_changed(metric_name: str, metrics: PlotMetrics)` to the `Element` abstract base class.
         - Remove all `Element` references from `PlotMetrics`; replace with a single `_on_change: Callable[[str], None]` callback to `Canvas`.
         - Add `Canvas._on_metrics_changed(metric_name: str)` as the mediator method that propagates changes to all registered elements.
-        - Add `on_metrics_changed(metric_name: str, metrics: PlotMetrics)` to the `Element` abstract base class.
-        - Register all elements with `Canvas` (not `PlotMetrics`) at construction time.
-    - `PlotRenderer`
-        - Remove `parent_canvas` reference; `PlotRenderer.__init__` takes `dim` and `axes_dim` directly. Canvas calls `pr.resize(dim, axes_dim)` when metrics change.
-        - Implement two draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates.
-        - Implement `_graph_to_canvas(pos, metrics) -> tuple[int, int]` as a private method on `PlotRenderer`.
-        - Surface selection is internal to `PlotRenderer`: canvas-coord methods draw to `surface_canvas`; graph-coord methods convert and draw to `surface_axes`.
-        - Enforce strict input types: `tuple[int, int]` for individual positions, `npt.NDArray[np.float64]` for bulk data. No implicit conversion.
-    - `Canvas`
-        - Replace the hardcoded draw list in `Canvas.draw()` with a proper element registry (`_elements: list[Element]`).
-    - `Elements`
-        - Remove `parent_canvas` reference from `Element` and all subclasses.
-        - Remove any `PlotMetrics` reference from all `Element` subclasses; receive it as a parameter in `on_metrics_changed`.
-        - Draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
+    - Remove `parent_canvas`/`PlotMetrics` reference from `Element` and all subclasses.
+    - Draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
 
-2. Implement `Grid` element.
-
-3. Complete `Legend` element (stub exists).
+3. `PlotRenderer` refactor
+    - Remove `parent_canvas` reference; `PlotRenderer.__init__` takes `dim` and `axes_dim` directly. Canvas calls `pr.resize(dim, axes_dim)` when metrics change.
+    - Implement two draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates.
+    - Implement `_graph_to_canvas(pos, metrics) -> tuple[int, int]` as a private method on `PlotRenderer`.
+    - Surface selection is internal to `PlotRenderer`: canvas-coord methods draw to `surface_canvas`; graph-coord methods convert and draw to `surface_axes`.
+    - Enforce strict input types: `tuple[int, int]` for individual positions, `npt.NDArray[np.float64]` for bulk data. No implicit conversion.
 
 4. Add `LinePlot` and `ScatterPlot` plot types.
 
@@ -49,9 +48,11 @@ Only start with implementation when the design file is ready!
     - In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
     - Implement `Canvas._check_domain_expansion(x, y)` that updates `metrics.xdom` / `metrics.ydom` when new data falls outside the current domain.
 
-6. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
+6. Complete `Legend` element (stub exists).
 
-7. Improve the test/example script `examples\plots_dev.py`:
+7. Implement `Grid` element.
+
+8. Improve the test/example script `examples\plots_dev.py`:
     - GUI sliders for plot metrics for easy testing.
     - Dynamic and static data examples:
         - Random walk (dynamic line)
@@ -59,6 +60,8 @@ Only start with implementation when the design file is ready!
         - GIF (dynamic array)
         - Test image (static array)
         - Normal distribution draws (dynamic scatter)
+
+9. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
 
 ## Dependency Tree
 

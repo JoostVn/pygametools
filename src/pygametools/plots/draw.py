@@ -1,3 +1,4 @@
+from .types import CoordinatePair, CoordinateArray, Coordinates
 from typing import Literal
 import pygame
 import pygame
@@ -67,7 +68,9 @@ class PlotRenderer:
 
         surface.blit(self.surface_canvas, self.metrics.pos)
 
-    def get_surface_pos(self, pos, on_axes):
+    def get_surface_pos(
+            self, pos: Coordinates,
+            on_axes: bool) -> tuple[pygame.Surface, Coordinates]:
         """
         Return either the canvas or axes sureface and convert coordinates.
 
@@ -80,11 +83,6 @@ class PlotRenderer:
         reverse the y-coordinates. If pos is a list of points, it should have
         shape (nr_points, 2).
         """
-        # TODO: think of a better way to handle coordinate switching. I don't like this function that returns two objects
-            # fix: graph-to-pygame coordinate function 
-        # Optimize
-        # TODO: what dimensions for pos do we allow? single point, list of points, numpy array?
-        # TODO: don't return both surface and pos, but have separate methods
 
         if not on_axes:
             return self.surface_canvas, pos
@@ -102,9 +100,7 @@ class PlotRenderer:
             relative_pos[1] = 1 - relative_pos[1]
 
         # Apply relative coordinates to pygame coordinates
-        #pos_axes = self.canvas.pos + self.canvas.pad[:2] + self.canvas.axes.dim * relative_pos
         pos_axes = self.canvas.axes.dim * relative_pos
-
         pos_axes = pos_axes.astype(int)
 
         return self.surface_axes, pos_axes
@@ -112,7 +108,7 @@ class PlotRenderer:
     def circle(self, on_axes=True):
         raise NotImplementedError
 
-    def line(self, pos, col, width=1, on_axes=True):
+    def line(self, pos: Coordinates, col: tuple, width=1, on_axes: bool=True):
         """
         Draw a line between two points in pos given as [[x1, y1], [x2, y2]].
         """
@@ -120,7 +116,11 @@ class PlotRenderer:
 
         pygame.draw.line(draw_surface, col, *draw_pos, width)
 
-    def vector(self, pos, vector, col, on_axes=True):
+    def vector(
+            self, pos: CoordinatePair,
+            vector: CoordinatePair,
+            col: tuple, 
+            on_axes: bool=True):
         """
         Draw a vector from a given pos and direction.
 
@@ -133,8 +133,8 @@ class PlotRenderer:
 
     def rect(
             self,
-            pos: np.ndarray,
-            dim: np.ndarray,
+            pos: CoordinatePair,
+            dim: CoordinatePair,
             facecol: tuple | None=None,
             linecol: tuple | None=None,
             on_axes: bool=True):
@@ -149,7 +149,15 @@ class PlotRenderer:
             pygame.draw.rect(draw_surface, linecol, rect, width=1)
 
     def text(
-            self, text, font, col, pos, ha, va, offset=(0,0), on_axes=True):
+            self,
+            text: str,
+            font: pygame.font.Font,
+            col: tuple,
+            pos: CoordinatePair,
+            ha: Literal["left", "center", "right"],
+            va: Literal["top", "center", "bottom"],
+            offset: CoordinatePair = (0,0),
+            on_axes: bool=True):
         """
         offset : TYPE, optional
             Offset in Pygame coordinates. Useful when drawing text with graph
