@@ -26,6 +26,8 @@ class PlotTestApp(Application):
         self._plot_ypos = 0
         self._plot_xdim = 0
         self._plot_ydim = 0
+        self._xdom_max = 0
+        self._ydom_max = 0
         self._num_yticks = 0
         self._num_xticks = 0
         
@@ -84,6 +86,26 @@ class PlotTestApp(Application):
         self.plot.metrics.dim = (old_dim[0], val)
         
     @property
+    def xdom_max(self):
+        return self._xdom_max
+    
+    @xdom_max.setter
+    def xdom_max(self, val: tuple[int, int]):
+        self._xdom_max = val
+        prev_xdom = self.plot.metrics.xdom
+        self.plot.metrics.xdom = (prev_xdom[0], val)
+
+    @property
+    def ydom_max(self):
+        return self._ydom_max
+    
+    @ydom_max.setter
+    def ydom_max(self, val: tuple[int, int]):
+        self._ydom_max = val
+        prev_ydom = self.plot.metrics.ydom
+        self.plot.metrics.ydom = (prev_ydom[0], val)
+
+    @property
     def num_xticks(self):
         return self._num_xticks
     
@@ -110,7 +132,7 @@ def main():
         pos=(150,10),
         dim=(300,200),
         xdom=(-5,10),
-        ydom=(-10,30),
+        ydom=(-5,10),
         title="Test plot title")
 
     canvas.axisx.set_num_ticks(11)
@@ -137,10 +159,16 @@ def main():
         app, 'plot_ydim', domain=(80, 390), default=200, pos=(10, 55),
         width=60, height=20),
     Slider(
-        app, 'num_xticks', domain=(1, 20), default=6, pos=(10, 70),
+        app, 'xdom_max', domain=(5, 20), default=5, pos=(10, 70),
         width=60, height=20),
     Slider(
-        app, 'num_yticks', domain=(1, 20), default=4, pos=(10, 85),
+        app, 'ydom_max', domain=(5, 20), default=5, pos=(10, 85),
+        width=60, height=20),
+    Slider(
+        app, 'num_xticks', domain=(1, 20), default=6, pos=(10, 100),
+        width=60, height=20),
+    Slider(
+        app, 'num_yticks', domain=(1, 20), default=4, pos=(10, 115),
         width=60, height=20),
     ])
     
