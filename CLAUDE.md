@@ -15,7 +15,7 @@ Any change in `src\pygametools\plots` should also be reflected in the test file 
 
 Some general formatting rules to keep in mind during the refactor:
 
-- Proper typehinting with `npt`.
+- Proper typehinting using numpy.typing and the `plots\types.py` module
 - Make sure that private attributes and methods are prefixed by an underscore.
 - Implement getters and setters for attributes with additional logic (instead of dedicated methods like `set_num_ticks`).
 
@@ -38,9 +38,9 @@ Some general formatting rules to keep in mind during the refactor:
 3. `PlotRenderer` refactor
     - Remove `parent_canvas` reference; `PlotRenderer.__init__` takes `dim` and `axes_dim` directly. Canvas calls `pr.resize(dim, axes_dim)` when metrics change.
     - Implement two draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates.
-    - Implement `_graph_to_canvas(pos, metrics) -> tuple[int, int]` as a private method on `PlotRenderer`.
+    - Implement `_graph_to_canvas(pos, metrics) -> CoordinatePair` as a private method on `PlotRenderer`.
     - Surface selection is internal to `PlotRenderer`: canvas-coord methods draw to `surface_canvas`; graph-coord methods convert and draw to `surface_axes`.
-    - Enforce strict input types: `tuple[int, int]` for individual positions, `npt.NDArray[np.float64]` for bulk data. No implicit conversion.
+    - Enforce strict input types: `CoordinatePair` for individual positions, `CoordinateArray` for bulk data. No implicit conversion.
 
 4. Add `LinePlot` and `ScatterPlot` plot types.
 

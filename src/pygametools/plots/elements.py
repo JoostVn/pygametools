@@ -18,7 +18,7 @@ OLD
 import numpy as np
 import numpy.typing as npt
 
-from pygametools.plots.types import CoordinatePair
+from pygametools.plots.types import CoordinatePair, Domain
 from .draw import PlotRenderer, PlotTheme
 from pygametools.color import Color
 from abc import ABC, abstractmethod
@@ -71,8 +71,8 @@ class PlotMetrics:
             self, 
             pos: CoordinatePair, 
             dim: CoordinatePair, 
-            xdom: CoordinatePair,
-            ydom: CoordinatePair, 
+            xdom: Domain,
+            ydom: Domain,
             axes_xpad: CoordinatePair=(30,10), 
             axes_ypad: CoordinatePair=(30,20)):
         
@@ -127,7 +127,7 @@ class PlotMetrics:
         return self._xdom
 
     @xdom.setter
-    def xdom(self, val: tuple[float, float]):
+    def xdom(self, val: Domain):
         assert val[0] < val[1], "Invalid x domain"
         self._xdom = np.array(val, dtype=float)
         self.update_metrics(metric='xdom')
@@ -137,7 +137,7 @@ class PlotMetrics:
         return self._ydom
 
     @ydom.setter
-    def ydom(self, val: tuple[float, float]):
+    def ydom(self, val: Domain):
         assert val[0] < val[1], "Invalid y domain"
         self._ydom = np.array(val, dtype=float)
         self.update_metrics(metric='ydom')
@@ -206,8 +206,8 @@ class Canvas:
             self,
             pos: tuple[int, int],
             dim: tuple[int, int],
-            xdom: tuple[float, float], 
-            ydom: tuple[float, float],
+            xdom: Domain, 
+            ydom: Domain,
             **kwargs):
         """
         Container for all plot elements and single source of truth for dimensions and domains.

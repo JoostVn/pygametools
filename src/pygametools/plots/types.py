@@ -7,6 +7,9 @@ import numpy.typing as npt
 # Can be direct coordinates as well as dimensions, domains, and padding.
 CoordinatePair = tuple[int, int]
 
+# Domain range (min, max) for x or y axis.
+Domain = tuple[float, float]
+
 # Bulk coordinate input for plotting data.
 CoordinateArray = npt.NDArray[np.float64]
 
