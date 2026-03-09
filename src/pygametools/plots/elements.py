@@ -73,8 +73,8 @@ class PlotMetrics:
             dim: CoordinatePair, 
             xdom: Domain,
             ydom: Domain,
-            axes_xpad: CoordinatePair=(30,10), 
-            axes_ypad: CoordinatePair=(30,20)):
+            axes_xpad: CoordinatePair=(40,10), 
+            axes_ypad: CoordinatePair=(22,18)):
         
         assert xdom[0] < xdom[1], "Invalid x domain"
         assert ydom[0] < ydom[1], "Invalid y domain"
@@ -128,6 +128,7 @@ class PlotMetrics:
 
     @xdom.setter
     def xdom(self, val: Domain):
+        # TODO: np.sarray or np.array?
         assert val[0] < val[1], "Invalid x domain"
         self._xdom = np.array(val, dtype=float)
         self.update_metrics(metric='xdom')
@@ -254,7 +255,7 @@ class Canvas:
 
 class Axes(Element):
 
-    def __init__(self, parent_canvas):
+    def __init__(self, parent_canvas: Canvas):
         """
         Contains a rectangle within parent_canvas containing all plots.
         """
@@ -289,7 +290,11 @@ class Axis(Element):
     LABELS_NUMERICAL = 0
     LABELS_TEXT = 1
 
-    def __init__(self, parent_canvas, orientation: int, **kwargs):
+    def __init__(
+            self,
+            parent_canvas: Canvas,
+            orientation: int,
+            **kwargs):
         """
         Axis element containing ticks and labels.
 
@@ -349,9 +354,7 @@ class Axis(Element):
         Recalculate the ticks locations and axis line.
         """
         # TODO: use the `metrics` parameter to only update the part of axis that is needed.
-        # TODO: clarify the type of coordinate system
-        # TODO: calculate the number of ticks based on dimensions
-        # TODO: move tick updatiting to its own method such that it can also be called from set_num_ticks
+        # TODO: move tick updating to its own method such that it can also be called from set_num_ticks
         
         # Alias for metrics
         metrics = self.canvas.metrics
@@ -382,7 +385,8 @@ class Axis(Element):
 
     def update_numerical_labels(self):
         """
-        Get string numberical labels with appropiate formatting.
+        Get string numberical labels with appropiate formatting (based on
+        the size of the axis label numbers: decimal, integer, or scientific).
         """
         numbers = np.linspace(
             self.dom[0] + self.span * self.tick_margin,
@@ -392,13 +396,15 @@ class Axis(Element):
 
         order_of_magnitude = floor(log10(max(abs(numbers))))
 
-        if -5 < order_of_magnitude < 5:
+        if -4 < order_of_magnitude < 5:
             round_to = max(0, 1 - order_of_magnitude)
             self.labels = [f"%.{round_to}f" % x for x in numbers]
         else:
-            self.labels = [np.format_float_scientific(x, 1) for x in numbers]
+            self.labels = [
+                np.format_float_scientific(x, precision=0, trim='-', sign=False)
+                for x in numbers]
 
-    def set_num_ticks(self, num_ticks):
+    def set_num_ticks(self, num_ticks: int):
         """
         Set a fixed number of evenly spaced tick locations
 
@@ -411,7 +417,7 @@ class Axis(Element):
         self.num_ticks = num_ticks
         self.update_metrics()
 
-    def set_ticks(self, ticks, labels):
+    def set_ticks(self, ticks: npt.NDArray, labels: tuple):
         """
         Set custom tick locations with a 1d array and optional string labels.
 
@@ -424,7 +430,7 @@ class Axis(Element):
         # Also implement label mode here
         raise NotImplementedError
 
-    def set_labels(self, labels):
+    def set_labels(self, labels: tuple):
         pass
 
     def draw(self):
@@ -446,7 +452,7 @@ class Axis(Element):
 
 class Title(Element):
 
-    def __init__(self, parent_canvas, title):
+    def __init__(self, parent_canvas: Canvas, title: str):
         """
         Contains the plot title and title dimensions, centered above axes.
         """
@@ -472,7 +478,7 @@ class Title(Element):
 
 class Legend(Element):
 
-    def __init__(self, parent_canvas):
+    def __init__(self, parent_canvas: Canvas):
         """
         Legend element for plots.
         """
