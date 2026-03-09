@@ -20,20 +20,22 @@ Some general formatting rules to keep in mind during the refactor:
 - Implement getters and setters for attributes with additional logic (instead of dedicated methods like `set_num_ticks`).
 
 1. `DrawContext` class and module
-    - Implement `DrawContext` as a simple dataclass holding `renderer: PlotRenderer`, `metrics: PlotMetrics`, `theme: PlotTheme`.
-    - Move DrawContext, PlotRenderer, PlotMetrics, PlotTheme to their own module (draw_context.py).
-    - Import all classes in `elements.py`
-    - Instantiate `DrawContext` once in `Canvas.__init__`.
+    - ✅ Implement `DrawContext` as a simple dataclass holding `renderer: PlotRenderer`, `metrics: PlotMetrics`, `theme: PlotTheme`.
+    - ✅ Move DrawContext, PlotRenderer, PlotMetrics, PlotTheme to their own module (drawing.py).
+    - ✅ Import all classes in `elements.py`
+    - ✅ Instantiate `DrawContext` once in `Canvas.__init__`.
 
 2. Metrics and elements
-    - Register all elements with `Canvas` (not `PlotMetrics`) at construction time.
-    - Replace the hardcoded draw list in `Canvas.draw()` with a proper element registry (`_elements: list[Element]`).
+    - ✅ Register all elements with `Canvas` (not `PlotMetrics`) at construction time.
+    - ✅ Replace the hardcoded draw list in `Canvas.draw()` with a proper element registry (`_elements: list[Element]`).
+
+    # TODO: how to do this part?
     - Implement metric change methods:
-        - Add `on_metrics_changed(metric_name: str, metrics: PlotMetrics)` to the `Element` abstract base class.
+        - Add `on_metrics_changed(metric_name: str, metrics: PlotMetrics)` to the `Element` abstract base class.  
         - Remove all `Element` references from `PlotMetrics`; replace with a single `_on_change: Callable[[str], None]` callback to `Canvas`.
         - Add `Canvas._on_metrics_changed(metric_name: str)` as the mediator method that propagates changes to all registered elements.
-    - Remove `parent_canvas`/`PlotMetrics` reference from `Element` and all subclasses.
-    - Draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
+        - Remove `parent_canvas`/`PlotMetrics` reference from `Element` and all subclasses.
+        - Draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
 
 3. `PlotRenderer` refactor
     - Remove `parent_canvas` reference; `PlotRenderer.__init__` takes `dim` and `axes_dim` directly. Canvas calls `pr.resize(dim, axes_dim)` when metrics change.

@@ -1,25 +1,12 @@
 """
 # TODO: remove all axis logic from axis objects such that only ticks and labels remain
 # TODO: have ticks and labels drawn on the canvas surface instead of the axes surface
-      
-OLD
-# TODO: fix the circle reference between metrics and elements. Maybe remove update responsibiliy from metrics?
-# TODO: in draw function, make sure on_axes converts coordinates instead of drawing on axes surface
-# TODO: fix line of axes not showing up
-# TODO: Change update_dimensions functions to update_metrics with a Literal metric
-# TODO: render axes without surface (to prevent out of bound ticks)
-# TODO: Fix axes: tick generation, orientation settings etc.
-# TODO: make sure all elements are registered to metrics and update on changes
-# TODO: make sure title, labels, ticks are drawn correctly after updates
-# TODO: Implement legend element
-# TODO: optimize metrics updates: only update elemements where relevant metrics have changed
- 
 """
+
 import numpy as np
 import numpy.typing as npt
-
 from pygametools.plots.types import CoordinatePair, Domain
-from .draw import PlotRenderer, PlotTheme
+from .drawing import PlotTheme, PlotMetrics, PlotRenderer, DrawContext
 from pygametools.color import Color
 from abc import ABC, abstractmethod
 from math import floor, log10
@@ -31,175 +18,43 @@ class Element(ABC):
     def __init__(self, parent_canvas):
         self.parent_canvas = parent_canvas
   
-    @property
-    def canvas(self):
-        return self.parent_canvas
+    # @property
+    # def canvas(self):
+    #     return self.parent_canvas
 
-    @property
-    def metrics(self):
-        return self.canvas.metrics
+    # @property
+    # def metrics(self):
+    #     return self.canvas.metrics
 
-    @property
-    def theme(self):
-        return self.canvas.theme
+    # @property
+    # def theme(self):
+    #     return self.canvas.theme
 
-    @property
-    def colors(self):
-        return self.theme.colors
+    # @property
+    # def colors(self):
+    #     return self.theme.colors
 
-    @property
-    def fonts(self):
-        return self.theme.fonts
+    # @property
+    # def fonts(self):
+    #     return self.theme.fonts
 
-    @property
-    def pr(self):
-        return self.canvas.pr
-
+    # @property
+    # def pr(self):
+    #     return self.canvas.pr
+    
+    # @abstractmethod
+    # def update_metrics(
+    #         self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad'] | None=None):
+    #     pass
+    
     @abstractmethod
-    def update_metrics(
-            self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad'] | None=None):
+    def on_metrics_changed(self, metric_name: str, metrics: PlotMetrics):
         pass
 
     @abstractmethod
-    def draw(self):
+    def draw(self, drawcontext: DrawContext):
         pass
         
-
-class PlotMetrics:
-
-    def __init__(
-            self, 
-            pos: CoordinatePair, 
-            dim: CoordinatePair, 
-            xdom: Domain,
-            ydom: Domain,
-            axes_xpad: CoordinatePair=(40,10), 
-            axes_ypad: CoordinatePair=(22,18)):
-        
-        assert xdom[0] < xdom[1], "Invalid x domain"
-        assert ydom[0] < ydom[1], "Invalid y domain"
-
-        self._pos = np.array(pos, dtype=int)
-        self._dim = np.array(dim, dtype=int) 
-        self._xdom = np.array(xdom, dtype=float) 
-        self._ydom = np.array(ydom, dtype=float) 
-        self._axes_xpad = np.array(axes_xpad, dtype=int)
-        self._axes_ypad = np.array(axes_ypad, dtype=int)
-
-        # List of objects to notify on changes
-        self._notify_objects = []  
-
-    def add_object(self, element: Element):
-        """Add an object that needs to be notified of changes"""
-        self._notify_objects.append(element)
-
-    def update_metrics(self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad']):
-        """
-        Notify all objects that metrics have changed.
-
-        The changed metric is included in the function call such that underlying objects can 
-        update only their relevant dimensions to improve performance.
-        """
-        for obj in self._notify_objects:
-            obj.update_metrics(metric)
-
-    # Top-level metrics and properties
-    @property
-    def pos(self) -> npt.NDArray[np.int_]:
-        return self._pos
-    
-    @pos.setter
-    def pos(self, val: CoordinatePair):
-        self._pos = np.array(val, dtype=int)
-        self.update_metrics(metric='pos')
-    
-    @property
-    def dim(self) -> npt.NDArray[np.int_]:
-        return self._dim
-    
-    @dim.setter
-    def dim(self, val: CoordinatePair):
-        self._dim = np.array(val, dtype=int)
-        self.update_metrics(metric='dim')
-    
-    @property
-    def xdom(self) -> npt.NDArray[np.float64]:
-        return self._xdom
-
-    @xdom.setter
-    def xdom(self, val: Domain):
-        # TODO: np.sarray or np.array?
-        assert val[0] < val[1], "Invalid x domain"
-        self._xdom = np.array(val, dtype=float)
-        self.update_metrics(metric='xdom')
-
-    @property
-    def ydom(self) -> npt.NDArray[np.float64]:
-        return self._ydom
-
-    @ydom.setter
-    def ydom(self, val: Domain):
-        assert val[0] < val[1], "Invalid y domain"
-        self._ydom = np.array(val, dtype=float)
-        self.update_metrics(metric='ydom')
-
-    @property
-    def axes_xpad(self) -> npt.NDArray[np.int_]:
-        return self._axes_xpad
-
-    @axes_xpad.setter
-    def axes_xpad(self, val: CoordinatePair):
-        self._axes_xpad = np.array(val, dtype=int)
-        self.update_metrics(metric='xpad')
-
-    @property
-    def axes_ypad(self) -> npt.NDArray[np.int_]:
-        return self._axes_ypad
-
-    @axes_ypad.setter
-    def axes_ypad(self, val: CoordinatePair):
-        self._axes_ypad = np.array(val, dtype=int)
-        self.update_metrics(metric='ypad')
-
-    # Derived properties
-    @property
-    def xdom_span(self) -> float:
-        return np.diff(self._xdom)[0]
-
-    @property
-    def ydom_span(self) -> float:
-        return np.diff(self._ydom)[0]
-
-    @property
-    def axes_pos(self) -> npt.NDArray[np.int_]:
-        """Position of the axis in pygame coordinates on the Canvas surface."""
-        return np.hstack([self._axes_xpad[0], self._axes_ypad[0]])
-
-    @property
-    def axes_dim(self) -> npt.NDArray[np.int_]:
-        """Dimensions of the axes in pygame coordinates."""
-        return self.dim - np.hstack([self._axes_xpad.sum(), self._axes_ypad.sum()])
-
-    @property
-    def axes_nw(self) -> npt.NDArray[np.int_]:
-        """NW point of axes on Canvas surface in pygame coordinates"""
-        return self.axes_pos
-
-    @property
-    def axes_sw(self) -> npt.NDArray[np.int_]:
-        """SW point of axes on Canvas surface in pygame coordinates"""
-        return self.axes_pos + [0, self.axes_dim[1]]
-
-    @property
-    def axes_ne(self) -> npt.NDArray[np.int_]:
-        """NE point of axes on Canvas surface in pygame coordinates"""
-        return self.axes_pos + [self.axes_dim[0], 0]
-
-    @property
-    def axes_se(self) -> npt.NDArray[np.int_]:
-        """SE point of axes on Canvas surface in pygame coordinates"""
-        return self.axes_pos + self.axes_dim
-
 
 class Canvas:
 
@@ -219,20 +74,28 @@ class Canvas:
             xdom: X-axis domain (min, max) in data coordinates
             ydom: Y-axis domain (min, max) in data coordinates                                            
         """
-        self.metrics = PlotMetrics(pos, dim, xdom, ydom)
-        self.theme = PlotTheme(**kwargs)
-
-        # Plot draw and element instances to metrics        
+        self.drawcontext = DrawContext(
+            theme=PlotTheme(**kwargs),
+            metrics=PlotMetrics(pos, dim, xdom, ydom),
+            renderer=PlotRenderer(self))
+        
+        # Elements and element registry        
         self.axes = Axes(self)
         self.title = Title(self, kwargs.get("title", ""))
         self.axisx = Axis(self, Axis.X)
         self.axisy = Axis(self, Axis.Y)
+        self._elements = [self.axes, self.title, self.axisx, self.axisy]
+        
+        
         
         # Instantiate plotrenderer and add objects to notify on metric changes
-        self.pr = PlotRenderer(self)
+        # self.pr = PlotMetrics
         
-        for obj in [self.pr, self.axes, self.title, self.axisx, self.axisy]:
-            self.metrics.add_object(obj)
+        # for obj in [self.pr, self.axes, self.title, self.axisx, self.axisy]:
+        #     self.metrics.add_object(obj)
+        
+        
+        
 
     def draw(self, surface):
         self.pr.clear()

@@ -1,6 +1,7 @@
-from .types import CoordinatePair, CoordinateArray, Coordinates
+from dataclasses import dataclass
+from .types import CoordinatePair, CoordinateArray, Coordinates, Domain
 from typing import Literal
-import pygame
+import numpy.typing as npt
 import pygame
 import pygame.gfxdraw
 import numpy as np
@@ -25,12 +26,158 @@ class PlotTheme:
             "title": (pygame.font.SysFont(font_type, 12), Color.BLACK),
             "legend": (pygame.font.SysFont(font_type, 10), Color.BLACK),
             "tick": (pygame.font.SysFont(font_type, 8), Color.BLACK)}
+        
 
+class PlotMetrics:
+
+    def __init__(
+            self, 
+            pos: CoordinatePair, 
+            dim: CoordinatePair, 
+            xdom: Domain,
+            ydom: Domain,
+            axes_xpad: CoordinatePair=(40,10), 
+            axes_ypad: CoordinatePair=(22,18)):
+        
+        assert xdom[0] < xdom[1], "Invalid x domain"
+        assert ydom[0] < ydom[1], "Invalid y domain"
+
+        self._pos = np.array(pos, dtype=int)
+        self._dim = np.array(dim, dtype=int) 
+        self._xdom = np.array(xdom, dtype=float) 
+        self._ydom = np.array(ydom, dtype=float) 
+        self._axes_xpad = np.array(axes_xpad, dtype=int)
+        self._axes_ypad = np.array(axes_ypad, dtype=int)
+
+
+
+
+
+        # List of objects to notify on changes
+        # self._notify_objects = []  
+    # def add_object(self, element: Element):
+    #     """Add an object that needs to be notified of changes"""
+    #     self._notify_objects.append(element)
+
+    # def update_metrics(self, metric: Literal['pos', 'dim', 'xdom', 'ydom', 'xpad', 'ypad']):
+    #     """
+    #     Notify all objects that metrics have changed.
+
+    #     The changed metric is included in the function call such that underlying objects can 
+    #     update only their relevant dimensions to improve performance.
+    #     """
+    #     for obj in self._notify_objects:
+    #         obj.update_metrics(metric)
+
+
+
+
+
+
+    # Top-level metrics and properties
+    @property
+    def pos(self) -> npt.NDArray[np.int_]:
+        return self._pos
+    
+    @pos.setter
+    def pos(self, val: CoordinatePair):
+        self._pos = np.array(val, dtype=int)
+        self.update_metrics(metric='pos')
+    
+    @property
+    def dim(self) -> npt.NDArray[np.int_]:
+        return self._dim
+    
+    @dim.setter
+    def dim(self, val: CoordinatePair):
+        self._dim = np.array(val, dtype=int)
+        self.update_metrics(metric='dim')
+    
+    @property
+    def xdom(self) -> npt.NDArray[np.float64]:
+        return self._xdom
+
+    @xdom.setter
+    def xdom(self, val: Domain):
+        # TODO: np.sarray or np.array?
+        assert val[0] < val[1], "Invalid x domain"
+        self._xdom = np.array(val, dtype=float)
+        self.update_metrics(metric='xdom')
+
+    @property
+    def ydom(self) -> npt.NDArray[np.float64]:
+        return self._ydom
+
+    @ydom.setter
+    def ydom(self, val: Domain):
+        assert val[0] < val[1], "Invalid y domain"
+        self._ydom = np.array(val, dtype=float)
+        self.update_metrics(metric='ydom')
+
+    @property
+    def axes_xpad(self) -> npt.NDArray[np.int_]:
+        return self._axes_xpad
+
+    @axes_xpad.setter
+    def axes_xpad(self, val: CoordinatePair):
+        self._axes_xpad = np.array(val, dtype=int)
+        self.update_metrics(metric='xpad')
+
+    @property
+    def axes_ypad(self) -> npt.NDArray[np.int_]:
+        return self._axes_ypad
+
+    @axes_ypad.setter
+    def axes_ypad(self, val: CoordinatePair):
+        self._axes_ypad = np.array(val, dtype=int)
+        self.update_metrics(metric='ypad')
+
+    # Derived properties
+    @property
+    def xdom_span(self) -> float:
+        return np.diff(self._xdom)[0]
+
+    @property
+    def ydom_span(self) -> float:
+        return np.diff(self._ydom)[0]
+
+    @property
+    def axes_pos(self) -> npt.NDArray[np.int_]:
+        """Position of the axis in pygame coordinates on the Canvas surface."""
+        return np.hstack([self._axes_xpad[0], self._axes_ypad[0]])
+
+    @property
+    def axes_dim(self) -> npt.NDArray[np.int_]:
+        """Dimensions of the axes in pygame coordinates."""
+        return self.dim - np.hstack([self._axes_xpad.sum(), self._axes_ypad.sum()])
+
+    @property
+    def axes_nw(self) -> npt.NDArray[np.int_]:
+        """NW point of axes on Canvas surface in pygame coordinates"""
+        return self.axes_pos
+
+    @property
+    def axes_sw(self) -> npt.NDArray[np.int_]:
+        """SW point of axes on Canvas surface in pygame coordinates"""
+        return self.axes_pos + [0, self.axes_dim[1]]
+
+    @property
+    def axes_ne(self) -> npt.NDArray[np.int_]:
+        """NE point of axes on Canvas surface in pygame coordinates"""
+        return self.axes_pos + [self.axes_dim[0], 0]
+
+    @property
+    def axes_se(self) -> npt.NDArray[np.int_]:
+        """SE point of axes on Canvas surface in pygame coordinates"""
+        return self.axes_pos + self.axes_dim
+    
 
 class PlotRenderer:
 
     def __init__(self, parent_canvas, **kwargs):
-        self.parent_canvas = parent_canvas
+        
+        # self.parent_canvas = parent_canvas
+        
         self.surface_canvas = pygame.Surface(self.canvas.metrics.dim)
         self.surface_axes = pygame.Surface(self.canvas.axes.dim)
         
@@ -191,3 +338,12 @@ class PlotRenderer:
             pass
 
         draw_surface.blit(text_block, (x,y))
+
+
+@dataclass    
+class DrawContext:
+    
+    theme: PlotTheme
+    metrics: PlotMetrics
+    renderer: PlotRenderer
+    
