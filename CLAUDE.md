@@ -28,29 +28,30 @@ Some general formatting rules to keep in mind during the refactor:
 2. Metrics and elements
     - ✅ Register all elements with `Canvas` (not `PlotMetrics`) at construction time.
     - ✅ Replace the hardcoded draw list in `Canvas.draw()` with a proper element registry (`_elements: list[Element]`).
-
-    - Move all metric setters and getters to `Canvas`
-    - Implement metric change methods:
-        - Add `on_metrics_changed(metric_name: str, metrics: PlotMetrics)` to the `Element` abstract base class.  
-        - Remove all `Element` references from `PlotMetrics`; replace with a single `_on_change: Callable[[str], None]` callback to `Canvas`.
-        - Add `Canvas._on_metrics_changed(metric_name: str)` as the mediator method that propagates changes to all registered elements.
-        - Remove `parent_canvas`/`PlotMetrics` reference from `Element` and all subclasses.
-        - Draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
+    - ✅ Add `on_metrics_changed(metric_name: str | None, metrics: PlotMetrics)` to the `Element` abstract base class.
+    - ✅ Remove all `Element` references from `PlotMetrics`; replace with a single `_on_change: Callable[[str], None]` callback to `Canvas`.
+    - ✅ Add `Canvas._on_metrics_changed(metric_name: str | None)` as the mediator method that propagates changes to all registered elements.
+    - ✅ Draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
+    - Expose metric setters/getters on `Canvas` as pass-through properties (e.g. `canvas.xdom = (0, 10)` → `canvas.ctx.metrics.xdom = (0, 10)`).
+    - Remove `Axis._metrics` — the only stored reference to `PlotMetrics` still left in an element. `_dom()` and `_span()` should be computed from the `metrics` argument passed to `on_metrics_changed`, not a cached copy.
+    - Replace `set_tick_num` / `set_tick_pos` dedicated methods with `num_ticks` / `tick_positions` property setters (see general formatting rules).
 
 3. `PlotRenderer` refactor
-    - Remove `parent_canvas` reference; `PlotRenderer.__init__` takes `dim` and `axes_dim` directly. Canvas calls `pr.resize(dim, axes_dim)` when metrics change.
-    - Implement two draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates.
-    - Implement `_graph_to_canvas(pos, metrics) -> CoordinatePair` as a private method on `PlotRenderer`.
-    - Surface selection is internal to `PlotRenderer`: canvas-coord methods draw to `surface_canvas`; graph-coord methods convert and draw to `surface_axes`.
-    - Enforce strict input types: `CoordinatePair` for individual positions, `CoordinateArray` for bulk data. No implicit conversion.
+    - ✅ Remove `parent_canvas` reference; `PlotRenderer.__init__` takes `dim` and `axes_dim` directly. Canvas calls `pr.resize(dim, axes_dim)` when metrics change.
+    - ✅ Surface selection is internal to `PlotRenderer` (via `get_surface_pos` and `on_axes` flag).
+    - Replace the `on_axes: bool` flag pattern with two explicit draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates. Remove `get_surface_pos`.
+    - Extract coordinate conversion into `_graph_to_canvas(pos, metrics) -> CoordinatePair` as a private method on `PlotRenderer`.
+    - Enforce strict input types: `CoordinatePair` for individual positions, `CoordinateArray` for bulk data. No implicit conversion. 
+    - Decide whether to add numpy array to `Domain` in `types.py`.
+    - Make `metrics` the second positional argument (after `self`) in all draw methods for consistency.
 
 4. Add more features to the existing elements:
-    - Text labels for ticks
-    - TODO: add more
+    - Text labels for ticks.
+    - Axis labels (single descriptive string per axis, X centered below tick labels, Y rotated 90°).
 
 5. Add `LinePlot`, `BarPlot`, and `ScatterPlot` plot types.
 
-5. Implement domain auto-expansion.
+6. Implement domain auto-expansion.
     - In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
     - Implement `Canvas._check_domain_expansion(x, y)` that updates `metrics.xdom` / `metrics.ydom` when new data falls outside the current domain.
 

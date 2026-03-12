@@ -8,7 +8,6 @@ import numpy.typing as npt
 CoordinatePair = tuple[int, int]
 
 # Domain range (min, max) for x or y axis.
-# TODO: add numpy array? Domains are converted to arrays internally 
 Domain = tuple[float, float]
 
 # Bulk coordinate input for plotting data.

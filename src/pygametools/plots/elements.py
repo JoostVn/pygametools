@@ -45,10 +45,9 @@ class Canvas:
         self._elements = [self.axes, self.title, self.axisx, self.axisy]
 
         # Push current metrics to all elements so they compute their initial state.
-        # TODO: support for no value for metric name? Passing None is weird.
-        self._on_metrics_changed(None)
+        self._on_metrics_changed()
 
-    def _on_metrics_changed(self, metric_name: str | None):
+    def _on_metrics_changed(self, metric_name: str | None = None):
         """
         Mediator: called by PlotMetrics when any metric changes.
 
@@ -155,7 +154,6 @@ class Axis(Element):
         self.label_mode = None
 
         # Most recent metrics snapshot; set on first on_metrics_changed call.
-        # TODO: remove reference to metrics. Should only be passed on method calls
         self._metrics: PlotMetrics | None = None
 
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
@@ -163,7 +161,6 @@ class Axis(Element):
         self._metrics = metrics
         self._recompute_ticks(metrics)
 
-    # TODO: just set from `on_metrics_changed`
     def _dom(self, metrics: PlotMetrics) -> npt.NDArray[np.float64]:
         return metrics.xdom if self.orientation == Axis.X else metrics.ydom
 

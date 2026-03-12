@@ -156,7 +156,6 @@ class PlotMetrics:
 
 class PlotRenderer:
 
-    # TODO: Should we use typing.py coordinate pairs here? That would also resolve the casting to int below
     def __init__(self, dim: npt.ArrayLike, axes_dim: npt.ArrayLike):
         self.surface_canvas = pygame.Surface(tuple(np.array(dim, dtype=int)))
         self.surface_axes = pygame.Surface(tuple(np.array(axes_dim, dtype=int)))
@@ -178,7 +177,6 @@ class PlotRenderer:
             (metrics.axes_xpad[0], metrics.axes_ypad[0]))
         surface.blit(self.surface_canvas, tuple(metrics.pos))
 
-    # TODO: make metrics the second argument in all draw functions (after self)
     def get_surface_pos(
             self,
             pos: Coordinates,
