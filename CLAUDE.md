@@ -33,12 +33,12 @@ Some general formatting rules to keep in mind during the refactor:
     - ✅ Add `Canvas._on_metrics_changed(metric_name: str | None)` as the mediator method that propagates changes to all registered elements.
     - ✅ Draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
     - Expose all metrics on `Canvas` as pass-through properties, making `Canvas` the sole public API for metric access:
-        
         - Settable properties with validation and `_on_metrics_changed` call: `pos`, `dim`, `xdom`, `ydom`, `axes_xpad`, `axes_ypad`.
-        - Read-only derived properties: `axes_pos`, `axes_dim`, `axes_nw`, `axes_sw`, `axes_ne`, `axes_se`, `xdom_span`, `ydom_span`.
+        - Read-only derived properties on `Canvas` (only those useful externally): `axes_pos`, `axes_dim`, `xdom_span`, `ydom_span`.
         - Rename `ctx` → `_ctx` to prevent external code from bypassing Canvas.
-        - Remove the `_on_change` callback from `PlotMetrics`; `PlotMetrics` becomes a plain data container. Validation and numpy conversion move to Canvas setters.
-        - Elements are unaffected — they continue to receive `metrics` directly as a method argument.
+        - Remove the `_on_change` callback from `PlotMetrics`; Canvas setters write directly to `PlotMetrics` private attributes and call `_on_metrics_changed` themselves. Validation and numpy conversion move to Canvas setters.
+        - `PlotMetrics` stores private attributes (`_xdom`, `_dim`, etc.) with public **getters only** (no public setters) so elements can read but not write. Derived computed properties (`axes_pos`, `axes_dim`, etc.) stay on `PlotMetrics` for internal element use.
+        - Elements are read-only consumers of `PlotMetrics` — they receive `metrics` as a method argument and only read from it. This is enforced by convention; `_ctx` being private ensures external code cannot reach `metrics` at all.
     - Remove `Axis._metrics` — the only stored reference to `PlotMetrics` still left in an element. `_dom()` and `_span()` should be computed from the `metrics` argument passed to `on_metrics_changed`, not a cached copy.
     - Replace `set_tick_num` / `set_tick_pos` dedicated methods with `num_ticks` / `tick_positions` property setters (see general formatting rules).
 
@@ -97,7 +97,7 @@ Canvas
 Dependency flow (what holds a reference to what):
 
 - `Canvas` → `PlotMetrics`, `PlotRenderer`, `PlotTheme`, `DrawContext`, all `Element` instances
-- `PlotMetrics` → `Canvas` (via `_on_change` callback only)
+- `PlotMetrics` → nothing (plain data container; no back-reference to `Canvas`)
 - Plot-data elements → `Canvas` (via `_on_data_added` callback only)
 - All other `Element` subclasses → nothing (receive `DrawContext` as a method argument for draw calls; receive `PlotMetrics` as a method argument for `on_metrics_changed`)
 
@@ -203,10 +203,11 @@ The `plots` module, for the most part, follows Matplotlib terminology.
 
 ### PlotMetrics
 
-- The dimensions and domains of a `Canvas` object are stored in the `PlotMetrics` dataclass.
-- `PlotMetrics` holds a single `_on_change: Callable[[str], None]` callback to `Canvas`. When any metric changes, it calls this callback with the name of the changed metric.
-- `Canvas` acts as the mediator: on receiving the notification, it calls `on_metrics_changed(metric_name, metrics)` on all registered `Element` instances so they can recompute their layout.
-- Each `Element` receives the metric name and the `PlotMetrics` instance as arguments — elements hold no permanent reference to `PlotMetrics`.
+- The dimensions and domains of a `Canvas` object are stored in `PlotMetrics`. `Canvas` is the sole writer: its property setters validate input, write directly to `PlotMetrics` private attributes, and call `Canvas._on_metrics_changed` themselves. `PlotMetrics` has no `_on_change` callback and no public setters.
+- `Canvas` acts as the mediator: `_on_metrics_changed` calls `on_metrics_changed(metric_name, metrics)` on all registered `Element` instances so they can recompute their layout.
+- `PlotMetrics` exposes public **getters only** so elements can read metrics but not write to them. Derived computed properties (`axes_pos`, `axes_dim`, etc.) also live on `PlotMetrics` for internal element use.
+- `Canvas` additionally exposes a subset of derived properties as read-only pass-throughs (`axes_pos`, `axes_dim`, `xdom_span`, `ydom_span`) for external use. `_ctx` is private, so external code cannot bypass `Canvas` to reach `PlotMetrics` directly.
+- Each `Element` receives the metric name and the `PlotMetrics` instance as arguments and only reads from it — elements hold no permanent reference to `PlotMetrics`.
 - `PlotMetrics` holds only high-level shared layout data that multiple elements need. Element-specific config (e.g. title padding, tick length) lives as attributes on the element itself. `PlotTheme` holds colors and fonts only.
 
 #### List of metrics
@@ -243,9 +244,41 @@ The `plots` module, for the most part, follows Matplotlib terminology.
 ### Adding Data to Plots
 
 - When data is added to a plot, it is stored within that plot object.
-- When data is added, the plot fires an `_on_data_added` callback registered by `Canvas.add_plot()`. `Canvas` then calls `_check_domain_expansion(x, y)` and updates `metrics.xdom` / `metrics.ydom` if the new data falls outside the current domain.
+- When data is added, the plot fires an `_on_data_added` callback registered by `Canvas.add_plot()`. `Canvas` then calls `_check_domain_expansion(x, y)` and updates `canvas.xdom` / `canvas.ydom` via its own property setters if the new data falls outside the current domain.
 - Out-of-bounds data is clipped automatically by `surface_axes`; no per-point bounds checking is required.
 - Dynamic plots only need to be updated when their data or metrics change. Otherwise, `surface_canvas` is reblitted as it was in the previous tick.
+
+## Public API Examples
+
+```python
+# Create a canvas (Application must be initialised first)
+canvas = Canvas(pos=(10, 10), dim=(580, 380), xdom=(0, 10), ydom=(-5, 10), title="My Plot")
+
+# Set metrics — always through Canvas
+canvas.xdom = (0, 20)
+canvas.ydom = (-1, 1)
+canvas.dim = (400, 300)
+canvas.axes_xpad = (50, 10)
+
+# Read derived properties — also through Canvas
+print(canvas.axes_dim)    # size of the axes area in pixels
+print(canvas.axes_pos)    # top-left of axes area in canvas coordinates
+print(canvas.xdom_span)   # 20.0  (xdom[1] - xdom[0])
+print(canvas.ydom_span)   # 2.0
+
+# Add a plot and data
+line = LinePlot(color=(255, 80, 80), name="signal")
+canvas.add_plot(line)
+line.add_point(1.0, 0.5)
+
+# Draw each frame
+canvas.draw(screen)
+
+# Element-specific config lives on the element, not on Canvas
+canvas.title.padding = 12
+canvas.axisx.tick_length = 6
+canvas.axisx.num_ticks = 5
+```
 
 ## Supported Plot Types
 
