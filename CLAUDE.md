@@ -269,7 +269,7 @@ print(canvas.ydom_span)   # 2.0
 # Add a plot and data
 line = LinePlot(color=(255, 80, 80), name="signal")
 canvas.add_plot(line)
-line.add_point(1.0, 0.5)
+line.add_data(...)
 
 # Draw each frame
 canvas.draw(screen)
