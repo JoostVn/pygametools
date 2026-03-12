@@ -32,10 +32,10 @@ class Canvas:
         # `_on_metrics_changed` is safe to call even if a setter fires during construction.
         self._elements: list[Element] = []
 
-        metrics = PlotMetrics(pos, dim, xdom, ydom, on_change=self._on_metrics_changed)
+        metrics = PlotMetrics(self._on_metrics_changed, pos, dim, xdom, ydom)
         theme = PlotTheme(**kwargs)
         renderer = PlotRenderer(metrics.dim, metrics.axes_dim)
-        self.drawcontext = DrawContext(theme=theme, metrics=metrics, renderer=renderer)
+        self.ctx = DrawContext(theme=theme, metrics=metrics, renderer=renderer)
 
         # Build element registry
         self.axes = Axes()
@@ -55,8 +55,8 @@ class Canvas:
         Resizes renderer surfaces when layout-affecting metrics change, then
         fans the notification out to every registered element.
         """
-        metrics = self.drawcontext.metrics
-        renderer = self.drawcontext.renderer
+        metrics = self.ctx.metrics
+        renderer = self.ctx.renderer
 
         # Only on dim/axes padding: resize the surfaces of plotrenderer
         if metric_name in ('dim', None, 'xpad', 'ypad'):
@@ -67,8 +67,7 @@ class Canvas:
             element.on_metrics_changed(metric_name, metrics)
 
     def draw(self, surface: pygame.Surface):
-        # TODO: Just rename drawcontext to ctx?
-        ctx = self.drawcontext
+        ctx = self.ctx
         ctx.renderer.clear(ctx.theme)
 
         # Border around the whole canvas
@@ -112,7 +111,7 @@ class Axes(Element):
 
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
         # TODO: pos and dim should probably be private methods here to preserve a single source of truth
-        # Or, even better, just fethc the dimensions directly from PlotMetrics at draw
+        # Or, even better, just fetch the dimensions directly from PlotMetrics at draw
         if metric_name in ('pos', 'xpad', 'ypad', None):
             self.pos = metrics.axes_pos
         if metric_name in ('dim', 'xpad', 'ypad', None):
@@ -189,7 +188,6 @@ class Axis(Element):
 
     def _recompute_ticks(self, metrics: PlotMetrics):
         """Recalculate tick positions and numerical labels."""
-        # TODO: move tick updating to its own method such that it can also be called from set_num_ticks
         axis_line_endpoints = np.vstack([
             metrics.axes_sw,
             metrics.axes_sw + self.axis_direction * metrics.axes_dim])

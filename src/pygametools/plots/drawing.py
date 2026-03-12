@@ -30,15 +30,14 @@ class PlotMetrics:
 
     def __init__(
             self,
+            on_change: Callable[[str], None],
             pos: CoordinatePair,
             dim: CoordinatePair,
             xdom: Domain,
             ydom: Domain,
             axes_xpad: CoordinatePair=(40,10),
-            axes_ypad: CoordinatePair=(22,18),
-            
-            # @CLAUDE: no default here. And why "None"?
-            on_change: Callable[[str], None] = lambda _: None):
+            axes_ypad: CoordinatePair=(22,18)
+            ):
         """
         Holds shared layout data for a Canvas.
 
@@ -157,13 +156,11 @@ class PlotMetrics:
 
 class PlotRenderer:
 
-    # @CLAUDE: Why not use the typing.py coordinate pairs here?
-    #   That would also resolve the casting to int below
+    # TODO: Should we use typing.py coordinate pairs here? That would also resolve the casting to int below
     def __init__(self, dim: npt.ArrayLike, axes_dim: npt.ArrayLike):
         self.surface_canvas = pygame.Surface(tuple(np.array(dim, dtype=int)))
         self.surface_axes = pygame.Surface(tuple(np.array(axes_dim, dtype=int)))
 
-    # @CLAUDE same here
     def resize(self, dim: npt.ArrayLike, axes_dim: npt.ArrayLike):
         """Recreate surfaces when canvas or axes dimensions change."""
         self.surface_canvas = pygame.Surface(tuple(np.array(dim, dtype=int)))
