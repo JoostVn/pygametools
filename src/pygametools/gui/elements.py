@@ -3,6 +3,7 @@ import pygame.gfxdraw
 import numpy as np
 from .base import load_theme, State
 from abc import ABC, abstractmethod
+from pygametools.fonts import load_font
 
 
 """
@@ -32,12 +33,10 @@ class Element(ABC):
             Name of the theme json file in the themes folder.
 
         """
-        pygame.init()
         self.font_size = kwargs.get('font_size', 10)
-        self.font_name = kwargs.get('font_name', 'msreferencesansserif')
-        
+
         self.theme = load_theme(theme_name)
-        self.font = pygame.font.SysFont(self.font_name, self.font_size)
+        self.font = load_font('Inter-VariableFont_opsz,wght.ttf', self.font_size)
         self.state = State.PASSIVE
         self.set_theme()
 

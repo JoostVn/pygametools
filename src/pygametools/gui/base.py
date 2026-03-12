@@ -4,9 +4,9 @@ import time
 from abc import ABC, abstractmethod
 from .file_manager import load_theme
 import sys
-# import pkg_resources
 from importlib.resources import files
 from enum import Enum
+from pygametools.fonts import load_font
 
 
 class State(Enum):
@@ -68,7 +68,11 @@ class Application(ABC):
     # TODO: ticker stats font
 
     def __init__(
-            self, window_size, tick_len=1/30, name='Application', theme_name='default'):
+            self,
+            window_size: tuple,
+            tick_len: float=1/30,
+            name: str='Application',
+            theme_name: str='default'):
         """
         Handles the main Pygame window, events, and ticks.
 
@@ -97,7 +101,7 @@ class Application(ABC):
         # Loading theme, background color and font
         self.theme = load_theme(theme_name)
         self.set_theme()
-        self.font_debug = pygame.font.SysFont('monospace', 12)
+        self.font_debug = load_font('JetBrainsMono-Medium.ttf', 9)
 
         # Creating key events dict
         self.key_events = {'up': [],'down': [],'hold': []}
@@ -107,7 +111,7 @@ class Application(ABC):
         self.zoom = 1
 
         # Defining screen
-        self.screen = pygame.display.set_mode(self.window_size)
+        self.screen = pygame.display.set_mode(window_size)
 
     @property
     def mouse_pos_draw(self) -> tuple[int, int]:

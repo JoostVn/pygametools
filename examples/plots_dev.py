@@ -3,7 +3,6 @@
 Development testing for plots (plotting 2) module
 
 TODO:
- - Sliders for other metrics such as axes padding
  - checkboxes for plot types (all in the same plot)
 """
 
@@ -16,7 +15,7 @@ class PlotTestApp(Application):
 
     def __init__(self, window_size):
         super().__init__(window_size)
-        self.plot: Canvas = []
+        self.plot: Canvas = None  # type: ignore[assignment]
         
         # Slider values
         self._plot_xpos = 0
@@ -29,9 +28,6 @@ class PlotTestApp(Application):
         self._ydom_max = 0
         self._num_yticks = 0
         self._num_xticks = 0
-        
-    def set_canvas(self, plot):
-        self.plot = plot
         
     def update(self):
         pass
@@ -48,8 +44,8 @@ class PlotTestApp(Application):
     def plot_xpos(self, val: int | float):  
         val = int(val)
         self._plot_xpos = val
-        old_pos = self.plot.metrics.pos
-        self.plot.metrics.pos = (val, old_pos[1])
+        old_pos = self.plot.drawcontext.metrics.pos
+        self.plot.drawcontext.metrics.pos = (val, old_pos[1])
         
     @property
     def plot_ypos(self):
@@ -59,8 +55,8 @@ class PlotTestApp(Application):
     def plot_ypos(self, val: int | float):
         val = int(val)
         self._plot_ypos = val
-        old_pos = self.plot.metrics.pos
-        self.plot.metrics.pos = (old_pos[0], val)
+        old_pos = self.plot.drawcontext.metrics.pos
+        self.plot.drawcontext.metrics.pos = (old_pos[0], val)
         
     @property
     def plot_xdim(self):
@@ -70,8 +66,8 @@ class PlotTestApp(Application):
     def plot_xdim(self, val: int | float):
         val = int(val)
         self._plot_xdim = val
-        old_dim = self.plot.metrics.dim
-        self.plot.metrics.dim = (val, old_dim[1])
+        old_dim = self.plot.drawcontext.metrics.dim
+        self.plot.drawcontext.metrics.dim = (val, old_dim[1])
           
     @property
     def plot_ydim(self):
@@ -81,8 +77,8 @@ class PlotTestApp(Application):
     def plot_ydim(self, val: int | float):
         val = int(val)
         self._plot_ydim = val
-        old_dim = self.plot.metrics.dim
-        self.plot.metrics.dim = (old_dim[0], val)
+        old_dim = self.plot.drawcontext.metrics.dim
+        self.plot.drawcontext.metrics.dim = (old_dim[0], val)
         
     @property
     def num_xticks(self):
@@ -92,7 +88,7 @@ class PlotTestApp(Application):
     def num_xticks(self, val: int | float):
         val = int(val)
         self._num_xticks = val
-        self.plot.axisx.set_num_ticks(val)
+        self.plot.axisx.set_tick_num(val)
     
     @property
     def num_yticks(self):
@@ -101,7 +97,7 @@ class PlotTestApp(Application):
     @num_yticks.setter
     def num_yticks(self, val):
         self._num_yticks = int(val)
-        self.plot.axisy.set_num_ticks(self._num_yticks)
+        self.plot.axisy.set_tick_num(self._num_yticks)
 
     @property
     def xdom_min(self):
@@ -111,8 +107,8 @@ class PlotTestApp(Application):
     def xdom_min(self, val: float):
         val = -(10 ** val)
         self._xdom_min = val
-        prev_xdom = self.plot.metrics.xdom
-        self.plot.metrics.xdom = (val, prev_xdom[1])
+        prev_xdom = self.plot.drawcontext.metrics.xdom
+        self.plot.drawcontext.metrics.xdom = (val, prev_xdom[1])
 
     @property
     def xdom_max(self):
@@ -122,8 +118,8 @@ class PlotTestApp(Application):
     def xdom_max(self, val: float):
         val = 10 ** val
         self._xdom_max = val
-        prev_xdom = self.plot.metrics.xdom
-        self.plot.metrics.xdom = (prev_xdom[0], val)
+        prev_xdom = self.plot.drawcontext.metrics.xdom
+        self.plot.drawcontext.metrics.xdom = (prev_xdom[0], val)
 
     @property
     def ydom_min(self):
@@ -133,8 +129,8 @@ class PlotTestApp(Application):
     def ydom_min(self, val: float):
         val = -(10 ** val)
         self._ydom_min = val
-        prev_ydom = self.plot.metrics.ydom
-        self.plot.metrics.ydom = (val, prev_ydom[1])
+        prev_ydom = self.plot.drawcontext.metrics.ydom
+        self.plot.drawcontext.metrics.ydom = (val, prev_ydom[1])
 
     @property
     def ydom_max(self):
@@ -144,11 +140,14 @@ class PlotTestApp(Application):
     def ydom_max(self, val: float):
         val = 10 ** val
         self._ydom_max = val
-        prev_ydom = self.plot.metrics.ydom
-        self.plot.metrics.ydom = (prev_ydom[0], val)
+        prev_ydom = self.plot.drawcontext.metrics.ydom
+        self.plot.drawcontext.metrics.ydom = (prev_ydom[0], val)
     
 
 def main():
+
+    # Create app first so that pygame.init() is called early
+    app = PlotTestApp(window_size=(600,400))
 
     # Create test plot
     canvas = Canvas(
@@ -157,17 +156,12 @@ def main():
         xdom=(-5,10),
         ydom=(-5,10),
         title="Test plot title")
-
-    canvas.axisx.set_num_ticks(11)
-    canvas.axisy.set_num_ticks(6)
-
-    # Create app 
-    app = PlotTestApp(window_size=(600,400))
+    canvas.axisx.set_tick_num(11)
+    canvas.axisy.set_tick_num(6)
     
-    # Add plots
-    app.set_canvas(canvas)
-    
-    # Create gui
+    # Add plot to app and set GUI
+    app.plot = canvas
+
     app.set_gui([
     Slider(
         app, 'plot_xpos', domain=(150, 300), default=150, pos=(10, 10),
@@ -203,8 +197,6 @@ def main():
     ])
     
     app.run()
-    pygame.quit()
-
 
 if __name__ == "__main__":
     main()

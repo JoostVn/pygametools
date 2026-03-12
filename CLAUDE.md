@@ -29,7 +29,7 @@ Some general formatting rules to keep in mind during the refactor:
     - ✅ Register all elements with `Canvas` (not `PlotMetrics`) at construction time.
     - ✅ Replace the hardcoded draw list in `Canvas.draw()` with a proper element registry (`_elements: list[Element]`).
 
-    # TODO: how to do this part?
+    - Move all metric setters and getters to `Canvas`
     - Implement metric change methods:
         - Add `on_metrics_changed(metric_name: str, metrics: PlotMetrics)` to the `Element` abstract base class.  
         - Remove all `Element` references from `PlotMetrics`; replace with a single `_on_change: Callable[[str], None]` callback to `Canvas`.
@@ -44,17 +44,21 @@ Some general formatting rules to keep in mind during the refactor:
     - Surface selection is internal to `PlotRenderer`: canvas-coord methods draw to `surface_canvas`; graph-coord methods convert and draw to `surface_axes`.
     - Enforce strict input types: `CoordinatePair` for individual positions, `CoordinateArray` for bulk data. No implicit conversion.
 
-4. Add `LinePlot` and `ScatterPlot` plot types.
+4. Add more features to the existing elements:
+    - Text labels for ticks
+    - TODO: add more
+
+5. Add `LinePlot`, `BarPlot`, and `ScatterPlot` plot types.
 
 5. Implement domain auto-expansion.
     - In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
     - Implement `Canvas._check_domain_expansion(x, y)` that updates `metrics.xdom` / `metrics.ydom` when new data falls outside the current domain.
 
-6. Complete `Legend` element (stub exists).
+7. Complete `Legend` element (stub exists).
 
-7. Implement `Grid` element.
+8. Implement `Grid` element.
 
-8. Improve the test/example script `examples\plots_dev.py`:
+9. Improve the test/example script `examples\plots_dev.py`:
     - GUI sliders for plot metrics for easy testing.
     - Dynamic and static data examples:
         - Random walk (dynamic line)
@@ -63,7 +67,7 @@ Some general formatting rules to keep in mind during the refactor:
         - Test image (static array)
         - Normal distribution draws (dynamic scatter)
 
-9. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
+10. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
 
 ## Dependency Tree
 

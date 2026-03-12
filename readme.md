@@ -35,3 +35,9 @@ A new plotting module built from scratch. Renders plots directly onto a Pygame s
 - **`Axes`** — the inner rectangle where data is plotted.
 - **`Axis`** — x or y axis with configurable ticks and labels.
 - **`Title`** — plot title, centered above the axes.
+
+
+## Used fonts
+
+Inter: https://fonts.google.com/specimen/Inter
+JetBrains Mono: https://www.jetbrains.com/lp/mono/
