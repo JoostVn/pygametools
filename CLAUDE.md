@@ -32,7 +32,13 @@ Some general formatting rules to keep in mind during the refactor:
     - ✅ Remove all `Element` references from `PlotMetrics`; replace with a single `_on_change: Callable[[str], None]` callback to `Canvas`.
     - ✅ Add `Canvas._on_metrics_changed(metric_name: str | None)` as the mediator method that propagates changes to all registered elements.
     - ✅ Draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
-    - Expose metric setters/getters on `Canvas` as pass-through properties (e.g. `canvas.xdom = (0, 10)` → `canvas.ctx.metrics.xdom = (0, 10)`).
+    - Expose all metrics on `Canvas` as pass-through properties, making `Canvas` the sole public API for metric access:
+        
+        - Settable properties with validation and `_on_metrics_changed` call: `pos`, `dim`, `xdom`, `ydom`, `axes_xpad`, `axes_ypad`.
+        - Read-only derived properties: `axes_pos`, `axes_dim`, `axes_nw`, `axes_sw`, `axes_ne`, `axes_se`, `xdom_span`, `ydom_span`.
+        - Rename `ctx` → `_ctx` to prevent external code from bypassing Canvas.
+        - Remove the `_on_change` callback from `PlotMetrics`; `PlotMetrics` becomes a plain data container. Validation and numpy conversion move to Canvas setters.
+        - Elements are unaffected — they continue to receive `metrics` directly as a method argument.
     - Remove `Axis._metrics` — the only stored reference to `PlotMetrics` still left in an element. `_dom()` and `_span()` should be computed from the `metrics` argument passed to `on_metrics_changed`, not a cached copy.
     - Replace `set_tick_num` / `set_tick_pos` dedicated methods with `num_ticks` / `tick_positions` property setters (see general formatting rules).
 
