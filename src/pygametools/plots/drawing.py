@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from .types import CoordinatePair, CoordinateArray, Coordinates, Domain
-from typing import Literal, Callable
+from typing import Literal
 import numpy.typing as npt
 import pygame
 import pygame.gfxdraw
@@ -30,7 +30,6 @@ class PlotMetrics:
 
     def __init__(
             self,
-            on_change: Callable[[str], None],
             pos: CoordinatePair,
             dim: CoordinatePair,
             xdom: Domain,
@@ -39,17 +38,15 @@ class PlotMetrics:
             axes_ypad: CoordinatePair=(22,18)
             ):
         """
-        Holds shared layout data for a Canvas.
+        Plain data container for shared Canvas layout metrics.
 
-        When any metric is changed via its setter, ``on_change`` is called with
-        the name of the changed metric. ``Canvas`` supplies its
-        ``_on_metrics_changed`` method as this callback so it can propagate the
-        update to all registered elements.
+        Read-only from the outside: only `Canvas` writes to the private
+        attributes directly. Elements receive a `PlotMetrics` instance as a
+        method argument and may only read from it.
         """
         assert xdom[0] < xdom[1], "Invalid x domain"
         assert ydom[0] < ydom[1], "Invalid y domain"
 
-        self._on_change = on_change
         self._pos = np.array(pos, dtype=int)
         self._dim = np.array(dim, dtype=int)
         self._xdom = np.array(xdom, dtype=float)
@@ -62,57 +59,25 @@ class PlotMetrics:
     def pos(self) -> npt.NDArray[np.int_]:
         return self._pos
 
-    @pos.setter
-    def pos(self, val: CoordinatePair):
-        self._pos = np.array(val, dtype=int)
-        self._on_change('pos')
-
     @property
     def dim(self) -> npt.NDArray[np.int_]:
         return self._dim
-
-    @dim.setter
-    def dim(self, val: CoordinatePair):
-        self._dim = np.array(val, dtype=int)
-        self._on_change('dim')
 
     @property
     def xdom(self) -> npt.NDArray[np.float64]:
         return self._xdom
 
-    @xdom.setter
-    def xdom(self, val: Domain):
-        assert val[0] < val[1], "Invalid x domain"
-        self._xdom = np.array(val, dtype=float)
-        self._on_change('xdom')
-
     @property
     def ydom(self) -> npt.NDArray[np.float64]:
         return self._ydom
-
-    @ydom.setter
-    def ydom(self, val: Domain):
-        assert val[0] < val[1], "Invalid y domain"
-        self._ydom = np.array(val, dtype=float)
-        self._on_change('ydom')
 
     @property
     def axes_xpad(self) -> npt.NDArray[np.int_]:
         return self._axes_xpad
 
-    @axes_xpad.setter
-    def axes_xpad(self, val: CoordinatePair):
-        self._axes_xpad = np.array(val, dtype=int)
-        self._on_change('xpad')
-
     @property
     def axes_ypad(self) -> npt.NDArray[np.int_]:
         return self._axes_ypad
-
-    @axes_ypad.setter
-    def axes_ypad(self, val: CoordinatePair):
-        self._axes_ypad = np.array(val, dtype=int)
-        self._on_change('ypad')
 
     # Derived properties
     @property

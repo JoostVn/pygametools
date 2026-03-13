@@ -41,44 +41,36 @@ class PlotTestApp(Application):
         return self._plot_xpos
     
     @plot_xpos.setter
-    def plot_xpos(self, val: int | float):  
-        val = int(val)
-        self._plot_xpos = val
-        old_pos = self.plot.ctx.metrics.pos
-        self.plot.ctx.metrics.pos = (val, old_pos[1])
-        
+    def plot_xpos(self, val: int | float):
+        self._plot_xpos = int(val)
+        self.plot.pos = (self._plot_xpos, self.plot.pos[1])
+
     @property
     def plot_ypos(self):
         return self._plot_ypos
-    
+
     @plot_ypos.setter
     def plot_ypos(self, val: int | float):
-        val = int(val)
-        self._plot_ypos = val
-        old_pos = self.plot.ctx.metrics.pos
-        self.plot.ctx.metrics.pos = (old_pos[0], val)
-        
+        self._plot_ypos = int(val)
+        self.plot.pos = (self.plot.pos[0], self._plot_ypos)
+
     @property
     def plot_xdim(self):
         return self._plot_xdim
-    
+
     @plot_xdim.setter
     def plot_xdim(self, val: int | float):
-        val = int(val)
-        self._plot_xdim = val
-        old_dim = self.plot.ctx.metrics.dim
-        self.plot.ctx.metrics.dim = (val, old_dim[1])
-          
+        self._plot_xdim = int(val)
+        self.plot.dim = (self._plot_xdim, self.plot.dim[1])
+
     @property
     def plot_ydim(self):
         return self._plot_ydim
-    
+
     @plot_ydim.setter
     def plot_ydim(self, val: int | float):
-        val = int(val)
-        self._plot_ydim = val
-        old_dim = self.plot.ctx.metrics.dim
-        self.plot.ctx.metrics.dim = (old_dim[0], val)
+        self._plot_ydim = int(val)
+        self.plot.dim = (self.plot.dim[0], self._plot_ydim)
         
     @property
     def num_xticks(self):
@@ -104,21 +96,17 @@ class PlotTestApp(Application):
 
     @xdom_min.setter
     def xdom_min(self, val: float):
-        val = -(10 ** val)
-        self._xdom_min = val
-        prev_xdom = self.plot.ctx.metrics.xdom
-        self.plot.ctx.metrics.xdom = (val, prev_xdom[1])
+        self._xdom_min = -(10 ** val)
+        self.plot.xdom = (self._xdom_min, self.plot.xdom[1])
 
     @property
     def xdom_max(self):
         return self._xdom_max
-    
+
     @xdom_max.setter
     def xdom_max(self, val: float):
-        val = 10 ** val
-        self._xdom_max = val
-        prev_xdom = self.plot.ctx.metrics.xdom
-        self.plot.ctx.metrics.xdom = (prev_xdom[0], val)
+        self._xdom_max = 10 ** val
+        self.plot.xdom = (self.plot.xdom[0], self._xdom_max)
 
     @property
     def ydom_min(self):
@@ -126,21 +114,17 @@ class PlotTestApp(Application):
 
     @ydom_min.setter
     def ydom_min(self, val: float):
-        val = -(10 ** val)
-        self._ydom_min = val
-        prev_ydom = self.plot.ctx.metrics.ydom
-        self.plot.ctx.metrics.ydom = (val, prev_ydom[1])
+        self._ydom_min = -(10 ** val)
+        self.plot.ydom = (self._ydom_min, self.plot.ydom[1])
 
     @property
     def ydom_max(self):
         return self._ydom_max
-    
+
     @ydom_max.setter
     def ydom_max(self, val: float):
-        val = 10 ** val
-        self._ydom_max = val
-        prev_ydom = self.plot.ctx.metrics.ydom
-        self.plot.ctx.metrics.ydom = (prev_ydom[0], val)
+        self._ydom_max = 10 ** val
+        self.plot.ydom = (self.plot.ydom[0], self._ydom_max)
     
 
 def main():

@@ -28,14 +28,12 @@ class Canvas:
             ydom: Y-axis domain (min, max) in data coordinates
             kwargs: TODO: find out where kwargs are used and update docstring
         """
-        # Initialise element registry before creating metrics so the callback
-        # `_on_metrics_changed` is safe to call even if a setter fires during construction.
         self._elements: list[Element] = []
 
-        metrics = PlotMetrics(self._on_metrics_changed, pos, dim, xdom, ydom)
+        metrics = PlotMetrics(pos, dim, xdom, ydom)
         theme = PlotTheme(**kwargs)
         renderer = PlotRenderer(metrics.dim, metrics.axes_dim)
-        self.ctx = DrawContext(theme=theme, metrics=metrics, renderer=renderer)
+        self._ctx = DrawContext(theme=theme, metrics=metrics, renderer=renderer)
 
         # Build element registry
         self.axes = Axes()
@@ -49,13 +47,13 @@ class Canvas:
 
     def _on_metrics_changed(self, metric_name: str | None = None):
         """
-        Mediator: called by PlotMetrics when any metric changes.
+        Called by Canvas property setters when any metric changes.
 
         Resizes renderer surfaces when layout-affecting metrics change, then
         fans the notification out to every registered element.
         """
-        metrics = self.ctx.metrics
-        renderer = self.ctx.renderer
+        metrics = self._ctx.metrics
+        renderer = self._ctx.renderer
 
         # Only on dim/axes padding: resize the surfaces of plotrenderer
         if metric_name in ('dim', None, 'xpad', 'ypad'):
@@ -65,8 +63,82 @@ class Canvas:
         for element in self._elements:
             element.on_metrics_changed(metric_name, metrics)
 
+    # ---- Settable metric properties
+    @property
+    def pos(self) -> npt.NDArray[np.int_]:
+        return self._ctx.metrics.pos
+
+    @pos.setter
+    def pos(self, val: CoordinatePair):
+        self._ctx.metrics._pos = np.array(val, dtype=int)
+        self._on_metrics_changed('pos')
+
+    @property
+    def dim(self) -> npt.NDArray[np.int_]:
+        return self._ctx.metrics.dim
+
+    @dim.setter
+    def dim(self, val: CoordinatePair):
+        self._ctx.metrics._dim = np.array(val, dtype=int)
+        self._on_metrics_changed('dim')
+
+    @property
+    def xdom(self) -> npt.NDArray[np.float64]:
+        return self._ctx.metrics.xdom
+
+    @xdom.setter
+    def xdom(self, val: Domain):
+        assert val[0] < val[1], "Invalid x domain"
+        self._ctx.metrics._xdom = np.array(val, dtype=float)
+        self._on_metrics_changed('xdom')
+
+    @property
+    def ydom(self) -> npt.NDArray[np.float64]:
+        return self._ctx.metrics.ydom
+
+    @ydom.setter
+    def ydom(self, val: Domain):
+        assert val[0] < val[1], "Invalid y domain"
+        self._ctx.metrics._ydom = np.array(val, dtype=float)
+        self._on_metrics_changed('ydom')
+
+    @property
+    def axes_xpad(self) -> npt.NDArray[np.int_]:
+        return self._ctx.metrics.axes_xpad
+
+    @axes_xpad.setter
+    def axes_xpad(self, val: CoordinatePair):
+        self._ctx.metrics._axes_xpad = np.array(val, dtype=int)
+        self._on_metrics_changed('xpad')
+
+    @property
+    def axes_ypad(self) -> npt.NDArray[np.int_]:
+        return self._ctx.metrics.axes_ypad
+
+    @axes_ypad.setter
+    def axes_ypad(self, val: CoordinatePair):
+        self._ctx.metrics._axes_ypad = np.array(val, dtype=int)
+        self._on_metrics_changed('ypad')
+
+    # ---- Read-only derived properties
+    @property
+    def axes_pos(self) -> npt.NDArray[np.int_]:
+        return self._ctx.metrics.axes_pos
+
+    @property
+    def axes_dim(self) -> npt.NDArray[np.int_]:
+        return self._ctx.metrics.axes_dim
+
+    @property
+    def xdom_span(self) -> float:
+        return self._ctx.metrics.xdom_span
+
+    @property
+    def ydom_span(self) -> float:
+        return self._ctx.metrics.ydom_span
+
     def draw(self, surface: pygame.Surface):
-        ctx = self.ctx
+        ctx = self._ctx
         ctx.renderer.clear(ctx.theme)
 
         # Border around the whole canvas

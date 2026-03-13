@@ -36,13 +36,13 @@ Some general formatting rules to keep in mind during the refactor:
     - ✅ Replace `set_tick_num` / `set_tick_pos` dedicated methods with `tick_num` / `tick_pos` property setters (see general formatting rules).
     
 3. Proper API exposure of metrics
-    - Expose all metrics on `Canvas` as pass-through properties, making `Canvas` the sole public API for metric access:
-    - Settable properties with validation and `_on_metrics_changed` call: `pos`, `dim`, `xdom`, `ydom`, `axes_xpad`, `axes_ypad`.
-    - Read-only derived properties on `Canvas` (only those useful externally): `axes_pos`, `axes_dim`, `xdom_span`, `ydom_span`.
-    - Rename `ctx` → `_ctx` to prevent external code from bypassing Canvas.
-    - Remove the `_on_change` callback from `PlotMetrics`; Canvas setters write directly to `PlotMetrics` private attributes and call `_on_metrics_changed` themselves. Validation and numpy conversion move to Canvas setters.
-    - `PlotMetrics` stores private attributes (`_xdom`, `_dim`, etc.) with public **getters only** (no public setters) so elements can read but not write. Derived computed properties (`axes_pos`, `axes_dim`, etc.) stay on `PlotMetrics` for internal element use.
-    - Elements are read-only consumers of `PlotMetrics` — they receive `metrics` as a method argument and only read from it. This is enforced by convention; `_ctx` being private ensures external code cannot reach `metrics` at all.
+    - ✅ Expose all metrics on `Canvas` as pass-through properties, making `Canvas` the sole public API for metric access:
+    - ✅ Settable properties with validation and `_on_metrics_changed` call: `pos`, `dim`, `xdom`, `ydom`, `axes_xpad`, `axes_ypad`.
+    - ✅ Read-only derived properties on `Canvas` (only those useful externally): `axes_pos`, `axes_dim`, `xdom_span`, `ydom_span`.
+    - ✅ Rename `ctx` → `_ctx` to prevent external code from bypassing Canvas.
+    - ✅ Remove the `_on_change` callback from `PlotMetrics`; Canvas setters write directly to `PlotMetrics` private attributes and call `_on_metrics_changed` themselves. Validation and numpy conversion move to Canvas setters.
+    - ✅ `PlotMetrics` stores private attributes (`_xdom`, `_dim`, etc.) with public **getters only** (no public setters) so elements can read but not write. Derived computed properties (`axes_pos`, `axes_dim`, etc.) stay on `PlotMetrics` for internal element use.
+    - ✅ Elements are read-only consumers of `PlotMetrics` — they receive `metrics` as a method argument and only read from it. This is enforced by convention; `_ctx` being private ensures external code cannot reach `metrics` at all.
    
 
 4. `PlotRenderer` refactor
@@ -77,7 +77,11 @@ Some general formatting rules to keep in mind during the refactor:
         - Test image (static array)
         - Normal distribution draws (dynamic scatter)
 
-11. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
+11. Make sure all type hinting is correct and consistent
+
+12. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
+
+
 
 ## Dependency Tree
 
