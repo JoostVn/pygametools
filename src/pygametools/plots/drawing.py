@@ -211,10 +211,20 @@ class PlotRenderer:
             col: tuple,
             metrics: PlotMetrics,
             radius: int = 3,
+            alpha: float = 1,
             on_axes: bool = True):
-        """Draw a filled circle at pos."""
+        """Draw a filled circle at pos. If alpha < 1, blits via a temporary SRCALPHA surface."""
         draw_surface, draw_pos = self.get_surface_pos(pos, on_axes, metrics)
-        pygame.draw.circle(draw_surface, col, tuple(draw_pos.astype(int)), radius)
+        x, y = tuple(draw_pos.astype(int))
+        
+        if alpha < 1:
+            alpha_int = int(round(255 * alpha, 0))
+            size = radius * 2 + 1
+            tmp = pygame.Surface((size, size), pygame.SRCALPHA)
+            pygame.draw.circle(tmp, (*col[:3], alpha_int), (radius, radius), radius)
+            draw_surface.blit(tmp, (x - radius, y - radius))
+        else:
+            pygame.draw.circle(draw_surface, col, (x, y), radius)
 
     def rect(
             self,

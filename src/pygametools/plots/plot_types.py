@@ -35,9 +35,10 @@ class PlotType(ABC):
 
 class ScatterPlot(PlotType):
 
-    def __init__(self, color: tuple, label: str, radius: int = 3):
+    def __init__(self, color: tuple, label: str, radius: int = 3, alpha: float = 1):
         super().__init__(color, label)
         self.radius = radius
+        self.alpha = alpha
         self.data = np.empty((0,2))
 
     def add_data(self, points: XYPlotData):
@@ -52,7 +53,7 @@ class ScatterPlot(PlotType):
             return
     
         for xy in self.data:
-            ctx.renderer.point(xy, self.color, ctx.metrics, self.radius)
+            ctx.renderer.point(xy, self.color, ctx.metrics, self.radius, self.alpha)
 
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
         pass
