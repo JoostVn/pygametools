@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Callable
 import numpy as np
+import numpy.typing as npt
 
-from pygametools.plots.types import XYPlotData
 from .drawing import DrawContext, PlotMetrics
 
 
@@ -21,13 +21,13 @@ class PlotType(ABC):
       so Canvas can check whether the domain needs expanding.
     """
 
-    def __init__(self, color: tuple, label: str):
+    def __init__(self, color: tuple[int, int, int], label: str):
         self.color = color
         self.label = label
-        self._on_data_added: Callable | None = None
+        self._on_data_added: Callable[[npt.NDArray[np.float64]], None] | None = None
         
         # Disables drawing and _on_data_added callback
-        self.enabled: bool = True
+        self.enabled = True
 
     @abstractmethod
     def draw(self, ctx: DrawContext): ...
@@ -38,13 +38,13 @@ class PlotType(ABC):
 
 class ScatterPlot(PlotType):
 
-    def __init__(self, color: tuple, label: str, radius: int = 3, alpha: float = 1):
+    def __init__(self, color: tuple[int, int, int], label: str, radius: int = 3, alpha: float = 1):
         super().__init__(color, label)
         self.radius = radius
         self.alpha = alpha
-        self.data = np.empty((0,2))
+        self.data = np.empty((0, 2), dtype=np.float64)
 
-    def add_data(self, points: XYPlotData, check_domain: bool | None = None):
+    def add_data(self, points: npt.ArrayLike, check_domain: bool | None = None):
         """Add data. Check_domain overrides self.enabled for domain checks."""
         points = np.reshape(points, (-1, 2))
         self.data = np.vstack([self.data, points])
@@ -68,11 +68,11 @@ class ScatterPlot(PlotType):
 
 class LinePlot(PlotType):
 
-    def __init__(self, color: tuple, label: str, width: int = 1):
+    def __init__(self, color: tuple[int, int, int], label: str, width: int = 1):
         super().__init__(color, label)
-        self.data = np.empty((0, 2))
+        self.data = np.empty((0, 2), dtype=np.float64)
 
-    def add_data(self, points: XYPlotData, check_domain: bool | None = None):
+    def add_data(self, points: npt.ArrayLike, check_domain: bool | None = None):
         points = np.reshape(points, (-1, 2))
         self.data = np.vstack([self.data, points])
 

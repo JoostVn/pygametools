@@ -1,6 +1,5 @@
 import numpy as np
 import numpy.typing as npt
-from pygametools.plots.types import MetricCoordinatePair, Domain
 from .drawing import PlotTheme, PlotMetrics, PlotRenderer, DrawContext
 from .plot_types import PlotType
 from pygametools.color import Color
@@ -14,10 +13,10 @@ class Canvas:
 
     def __init__(
             self,
-            pos: tuple[int, int],
-            dim: tuple[int, int],
-            xdom: Domain,
-            ydom: Domain,
+            pos: npt.ArrayLike,
+            dim: npt.ArrayLike,
+            xdom: npt.ArrayLike,
+            ydom: npt.ArrayLike,
             **kwargs):
         """
         Container for all plot elements.
@@ -88,7 +87,7 @@ class Canvas:
         self._elements.append(plot)
         plot.on_metrics_changed(None, self._ctx.metrics)
 
-    def _check_domain_expansion(self, points: np.ndarray):
+    def _check_domain_expansion(self, points: npt.NDArray[np.float64]):
         """Expand xdom/ydom if new data falls outside the current domain.
 
         When expansion is needed, a margin of `domain_margin * new_span` is
@@ -126,7 +125,7 @@ class Canvas:
         return self._ctx.metrics.pos
 
     @pos.setter
-    def pos(self, val: MetricCoordinatePair):
+    def pos(self, val: npt.ArrayLike):
         self._ctx.metrics._pos = np.array(val, dtype=int)
         self._on_metrics_changed('pos')
 
@@ -135,7 +134,7 @@ class Canvas:
         return self._ctx.metrics.dim
 
     @dim.setter
-    def dim(self, val: MetricCoordinatePair):
+    def dim(self, val: npt.ArrayLike):
         self._ctx.metrics._dim = np.array(val, dtype=int)
         self._on_metrics_changed('dim')
 
@@ -144,7 +143,7 @@ class Canvas:
         return self._ctx.metrics.xdom
 
     @xdom.setter
-    def xdom(self, val: Domain):
+    def xdom(self, val: npt.ArrayLike):
         assert val[0] < val[1], "Invalid x domain"
         self._ctx.metrics._xdom = np.array(val, dtype=float)
         self._on_metrics_changed('xdom')
@@ -154,7 +153,7 @@ class Canvas:
         return self._ctx.metrics.ydom
 
     @ydom.setter
-    def ydom(self, val: Domain):
+    def ydom(self, val: npt.ArrayLike):
         assert val[0] < val[1], "Invalid y domain"
         self._ctx.metrics._ydom = np.array(val, dtype=float)
         self._on_metrics_changed('ydom')
@@ -164,7 +163,7 @@ class Canvas:
         return self._ctx.metrics.axes_xpad
 
     @axes_xpad.setter
-    def axes_xpad(self, val: MetricCoordinatePair):
+    def axes_xpad(self, val: npt.ArrayLike):
         self._ctx.metrics._axes_xpad = np.array(val, dtype=int)
         self._on_metrics_changed('xpad')
 
@@ -173,7 +172,7 @@ class Canvas:
         return self._ctx.metrics.axes_ypad
 
     @axes_ypad.setter
-    def axes_ypad(self, val: MetricCoordinatePair):
+    def axes_ypad(self, val: npt.ArrayLike):
         self._ctx.metrics._axes_ypad = np.array(val, dtype=int)
         self._on_metrics_changed('ypad')
 
@@ -217,8 +216,8 @@ class Axes(Element):
 
     def __init__(self):
         """Contains the rectangular plot area within the Canvas."""
-        self.dim = np.zeros(2)
-        self.pos = np.zeros(2)
+        self.dim = np.zeros(2, dtype=np.int_)
+        self.pos = np.zeros(2, dtype=np.int_)
 
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
         # TODO: pos and dim should probably be private methods here to preserve a single source of truth
@@ -252,25 +251,27 @@ class Axis(Element):
         Axis element containing ticks and labels.
         """
         self.orientation = orientation
-        self.tick_margin = kwargs.get("margin", 0.1)
-        self.tick_length = kwargs.get("length", 3)
-        
+
         # Cached derived properties from PlotMetrics
-        self._dom = np.zeros(2)
-        self._span = 0
-        self._axes_dim = np.zeros(2)
-        self._axis_line_endpoints = np.zeros((2,2))
+        self._dom = np.zeros(2, dtype=np.float64)
+        self._span = 0.0
+        self._axes_dim = np.zeros(2, dtype=np.int_)
+        self._axis_line_endpoints = np.zeros((2, 2), dtype=np.int_)
 
         # Private attributes
-        self._tick_num = kwargs.get("num_ticks", 6)
-        self._tick_pos = np.zeros((0, 2))
-        self._labels = []
-        
+        self._tick_num = 6
+        self._tick_pos = np.zeros((0, 2), dtype=np.float64)
+        self._labels: list[str] = []
+
         # Tick mode: either fixed locations or fixed values
-        self.tick_mode = None
-        
+        self.tick_mode = self.FIXED_TICK_POSITIONS
+
         # Label mode: either numberical or text
-        self.label_mode = None
+        self.label_mode = self.LABELS_NUMERICAL
+
+        # Kwargs
+        self.tick_margin: float = kwargs.get("margin", 0.1)
+        self.tick_length: int = kwargs.get("length", 3)
         
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
         """
@@ -316,9 +317,9 @@ class Axis(Element):
     
     # ---- Properties settable from the API
     @property
-    def tick_num(self):
+    def tick_num(self) -> int:
         return self._tick_num
-        
+
     @tick_num.setter
     def tick_num(self, val: int):
         """Set a fixed number of evenly spaced tick locations."""
@@ -330,24 +331,24 @@ class Axis(Element):
         if self.label_mode == Axis.LABELS_NUMERICAL:
             self._update_numerical_labels()
         
-    @property 
-    def tick_pos(self):
+    @property
+    def tick_pos(self) -> npt.NDArray[np.float64]:
         return self._tick_pos
-    
+
     @tick_pos.setter
-    def tick_pos(self, val: npt.NDArray[np.float64]):
+    def tick_pos(self, val: npt.ArrayLike):
         """Set custom ticks fixed positions."""
         self.tick_mode = Axis.FIXED_TICK_VALUES
         raise NotImplementedError
     
     @property
-    def labels(self):
+    def labels(self) -> list[str]:
         return self._labels
-    
+
     @labels.setter
-    def labels(self, val: tuple[str]):
+    def labels(self, val: list[str] | tuple[str, ...]):
         self.label_mode = Axis.LABELS_TEXT
-        self._labels = val
+        self._labels = list(val)
         
     
     # ---- Properties/methods that fetch the correct metrics based on orientation
@@ -360,12 +361,12 @@ class Axis(Element):
         return 'center' if self.orientation == Axis.X else 'right'
 
     @property
-    def tick_direction(self) -> np.ndarray:
+    def tick_direction(self) -> npt.NDArray[np.int_]:
         """Return a vector in the direction of ticks, from away from the axes."""
         return np.array((0, 1)) if self.orientation == Axis.X else np.array((-1, 0))
 
     @property
-    def axis_direction(self) -> np.ndarray:
+    def axis_direction(self) -> npt.NDArray[np.int_]:
         """Return a vector in the direction of the axis, starting at the SW point."""
         return np.array((1, 0)) if self.orientation == Axis.X else np.array((0, -1))
        
@@ -408,7 +409,7 @@ class Title(Element):
     def __init__(self, title: str):
         """Title string centered above the axes."""
         self.title = title
-        self.pos = np.zeros(2)
+        self.pos = np.zeros(2, dtype=np.float64)
 
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
         self.pos = np.array([

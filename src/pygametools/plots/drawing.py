@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from .types import MetricCoordinatePair, MetricCoordinateArray, MetricCoordinates, Domain
 from typing import Literal
 import numpy.typing as npt
 import pygame
@@ -30,12 +29,12 @@ class PlotMetrics:
 
     def __init__(
             self,
-            pos: MetricCoordinatePair,
-            dim: MetricCoordinatePair,
-            xdom: Domain,
-            ydom: Domain,
-            axes_xpad: MetricCoordinatePair=(40,10),
-            axes_ypad: MetricCoordinatePair=(22,18)
+            pos: npt.ArrayLike,
+            dim: npt.ArrayLike,
+            xdom: npt.ArrayLike,
+            ydom: npt.ArrayLike,
+            axes_xpad: npt.ArrayLike = (40, 10),
+            axes_ypad: npt.ArrayLike = (22, 18)
             ):
         """
         Plain data container for shared Canvas layout metrics.
@@ -144,7 +143,7 @@ class PlotRenderer:
 
     def get_surface_pos(
             self,
-            pos: MetricCoordinates,
+            pos: npt.ArrayLike,
             on_axes: bool,
             metrics: PlotMetrics) -> tuple[pygame.Surface, npt.NDArray]:
         """
@@ -179,8 +178,8 @@ class PlotRenderer:
 
     def line(
             self,
-            pos: MetricCoordinates,
-            col: tuple,
+            pos: npt.ArrayLike,
+            col: tuple[int, int, int],
             metrics: PlotMetrics,
             on_axes: bool = True):
         """Draw a line between two points in pos given as [[x1, y1], [x2, y2]]."""
@@ -191,9 +190,9 @@ class PlotRenderer:
 
     def vector(
             self,
-            pos: MetricCoordinates,
-            vector: MetricCoordinates,
-            col: tuple,
+            pos: npt.ArrayLike,
+            vector: npt.ArrayLike,
+            col: tuple[int, int, int],
             metrics: PlotMetrics,
             on_axes: bool = True):
         """
@@ -208,8 +207,8 @@ class PlotRenderer:
 
     def point(
             self,
-            pos: MetricCoordinates,
-            col: tuple,
+            pos: npt.ArrayLike,
+            col: tuple[int, int, int],
             metrics: PlotMetrics,
             radius: int,
             alpha: float = 1,
@@ -233,7 +232,7 @@ class PlotRenderer:
     def polyline(
             self,
             points: npt.ArrayLike,
-            col: tuple,
+            col: tuple[int, int, int],
             metrics: PlotMetrics):
         """Draw a connected polyline through an (N, 2) array of graph-coordinate points."""
         pts = np.asarray(points, dtype=float)
@@ -246,11 +245,11 @@ class PlotRenderer:
 
     def rect(
             self,
-            pos: MetricCoordinates,
-            dim: MetricCoordinates,
+            pos: npt.ArrayLike,
+            dim: npt.ArrayLike,
             metrics: PlotMetrics,
-            facecol: tuple | None = None,
-            linecol: tuple | None = None,
+            facecol: tuple[int, int, int] | None = None,
+            linecol: tuple[int, int, int] | None = None,
             on_axes: bool = True):
 
         draw_surface, draw_pos = self.get_surface_pos(pos, on_axes, metrics)
@@ -265,12 +264,12 @@ class PlotRenderer:
             self,
             text: str,
             font: pygame.font.Font,
-            col: tuple,
-            pos: MetricCoordinates,
+            col: tuple[int, int, int],
+            pos: npt.ArrayLike,
             ha: Literal["left", "center", "right"],
             va: Literal["top", "center", "bottom"],
             metrics: PlotMetrics,
-            offset: MetricCoordinates = (0, 0),
+            offset: npt.ArrayLike = (0, 0),
             on_axes: bool = True):
         """
         Args:
