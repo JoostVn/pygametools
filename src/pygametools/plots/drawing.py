@@ -226,6 +226,21 @@ class PlotRenderer:
         else:
             pygame.draw.circle(draw_surface, col, (x, y), radius)
 
+    def polyline(
+            self,
+            points: npt.ArrayLike,
+            col: tuple,
+            metrics: PlotMetrics,
+            width: int = 1):
+        """Draw a connected polyline through an (N, 2) array of graph-coordinate points."""
+        pts = np.asarray(points, dtype=float)
+        if len(pts) < 2:
+            return
+        rel_x = (pts[:, 0] - metrics.xdom[0]) / metrics.xdom_span
+        rel_y = 1.0 - (pts[:, 1] - metrics.ydom[0]) / metrics.ydom_span
+        pixel_pts = (np.column_stack([rel_x, rel_y]) * metrics.axes_dim).astype(int).tolist()
+        pygame.draw.lines(self.surface_axes, col, False, pixel_pts, width)
+
     def rect(
             self,
             pos: MetricCoordinates,

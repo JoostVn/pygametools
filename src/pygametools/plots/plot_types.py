@@ -64,3 +64,29 @@ class ScatterPlot(PlotType):
 
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
         pass
+
+
+class LinePlot(PlotType):
+
+    def __init__(self, color: tuple, label: str, width: int = 1):
+        super().__init__(color, label)
+        self.width = width
+        self.data = np.empty((0, 2))
+
+    def add_data(self, points: XYPlotData, check_domain: bool | None = None):
+        points = np.reshape(points, (-1, 2))
+        self.data = np.vstack([self.data, points])
+
+        if self._on_data_added and check_domain is None and self.enabled:
+            self._on_data_added(points)
+        elif self._on_data_added and check_domain:
+            self._on_data_added(points)
+
+    def draw(self, ctx: DrawContext):
+        if not self.enabled or self.data.shape[0] < 2:
+            return
+        ctx.renderer.polyline(self.data, self.color, ctx.metrics, self.width)
+
+    def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
+        pass
+

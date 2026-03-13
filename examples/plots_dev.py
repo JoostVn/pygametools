@@ -13,7 +13,7 @@ from pygametools.plots.elements import Canvas
 from pygametools.gui.base import Application
 import pygame
 from pygametools.gui.elements import Button, CheckBox, Slider, Label, TextBox
-from pygametools.plots.plot_types import PlotType, ScatterPlot
+from pygametools.plots.plot_types import PlotType, ScatterPlot, LinePlot
 
 class PlotTestApp(Application):
 
@@ -158,14 +158,24 @@ def main():
     
     # Create plots to add to canvas
     scatterplot = ScatterPlot(Color.BLACK, 'scatter_test', radius=1, alpha=0.3)
-    
+
     def update_scatterplot():
-        scatterplot.add_data(np.random.normal(0,1,2))
-    
-    
+        scatterplot.add_data(np.random.normal(0, 1, 2))
+
     app.add_plot_funcs(update_scatterplot)
-    
     canvas.add_plot(scatterplot)
+
+    lineplot = LinePlot(Color.RED3, 'random_walk', width=1)
+    _walk_x = [0.0]
+    _walk_y = [0.0]
+
+    def update_lineplot():
+        _walk_x.append(_walk_x[-1] + 0.1)
+        _walk_y.append(_walk_y[-1] + np.random.choice([-1, 1]) * np.random.random())
+        lineplot.add_data((_walk_x[-1], _walk_y[-1]))
+
+    app.add_plot_funcs(update_lineplot)
+    canvas.add_plot(lineplot)
     
     # Add canvas to app and set GUI
     app.canvas = canvas
@@ -204,7 +214,12 @@ def main():
         width=60, height=20),
     
     Label('ScatterPlot', pos=(10,335), width=80, height=18, hcenter=True, vcenter=True),
-    CheckBox(scatterplot, 'enabled', default=False, pos=(10, 360))
+    CheckBox(scatterplot, 'enabled', default=False, pos=(10, 360)),
+    
+    Label('LinePlot', pos=(100,335), width=80, height=18, hcenter=True, vcenter=True),
+    CheckBox(lineplot, 'enabled', default=False, pos=(100, 360))
+    
+    
     ])
     
     app.run()
