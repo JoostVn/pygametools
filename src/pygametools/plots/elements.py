@@ -1,6 +1,6 @@
 import numpy as np
 import numpy.typing as npt
-from pygametools.plots.types import MetricCoordinatePair, Domain, XYPlotDataBatch
+from pygametools.plots.types import MetricCoordinatePair, Domain
 from .drawing import PlotTheme, PlotMetrics, PlotRenderer, DrawContext
 from .plot_types import PlotType
 from pygametools.color import Color
@@ -42,6 +42,8 @@ class Canvas:
         self.axisx = Axis(Axis.X)
         self.axisy = Axis(Axis.Y)
         self._elements = [self.axes, self.title, self.axisx, self.axisy]
+
+        self.domain_margin: float = 0.05
 
         # Push current metrics to all elements so they compute their initial state.
         self._on_metrics_changed()
@@ -86,30 +88,27 @@ class Canvas:
         self._elements.append(plot)
         plot.on_metrics_changed(None, self._ctx.metrics)
 
-    def _check_domain_expansion(self, points: XYPlotDataBatch):
-        """Expand xdom/ydom if new data falls outside the current domain."""
-        margin = 0.05
-        
-        xdom_cur = self._ctx.metrics.xdom
-        ydom_cur = self._ctx.metrics.ydom
-        xmin, xmax = points[:,0].min(), points[:,0].max()    
+    def _check_domain_expansion(self, points: np.ndarray):
+        """Expand xdom/ydom if new data falls outside the current domain.
+
+        When expansion is needed, a margin of `domain_margin * new_span` is
+        added so the data doesn't sit right at the edge. Checking against the
+        pre-margin bounds prevents the margin from compounding on every call.
+        """
+        xdom = self._ctx.metrics.xdom
+        ydom = self._ctx.metrics.ydom
+        xmin, xmax = points[:,0].min(), points[:,0].max()
         ymin, ymax = points[:,1].min(), points[:,1].max()
-    
-        if xmin < xdom_cur[0] or xmax > xdom_cur[1]:
-            new_xdomain = (min(xmin, xdom_cur[0]), max(xmax, xdom_cur[1]))
-           
-            self.xdom = new_xdomain
-           
-            # new_xmargin = margin * (new_xdomain[1] - new_xdomain[0])
-            # self.xdom = (new_xdomain[0] - new_xmargin, new_xdomain[0] + new_xmargin)
-            
-        if ymin < ydom_cur[0] or ymax > ydom_cur[1]:
-            new_ydomain = (min(ymin, ydom_cur[0]), max(ymax, ydom_cur[1]))
-            
-            self.ydom = new_ydomain
-            
-            # new_ymargin = margin * (new_ydomain[1] - new_ydomain[0])
-            # self.ydom = (new_ydomain[0] - new_ymargin, new_ydomain[0] + new_ymargin)
+
+        if xmin < xdom[0] or xmax > xdom[1]:
+            lo, hi = min(xmin, xdom[0]), max(xmax, xdom[1])
+            pad = self.domain_margin * (hi - lo)
+            self.xdom = (lo - pad, hi + pad)
+
+        if ymin < ydom[0] or ymax > ydom[1]:
+            lo, hi = min(ymin, ydom[0]), max(ymax, ydom[1])
+            pad = self.domain_margin * (hi - lo)
+            self.ydom = (lo - pad, hi + pad)
 
     # ---- Settable metric properties
     @property
@@ -198,11 +197,10 @@ class Element(ABC):
         (e.g. on initial setup). `metrics` is the current `PlotMetrics`
         instance; elements must not store a permanent reference to it.
         """
-        pass
+        ...
 
     @abstractmethod
-    def draw(self, ctx: DrawContext):
-        pass
+    def draw(self, ctx: DrawContext): ...
 
 
 class Axes(Element):

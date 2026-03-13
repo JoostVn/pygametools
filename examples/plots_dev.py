@@ -157,10 +157,10 @@ def main():
     canvas.axisy.tick_num = 6
     
     # Create plots to add to canvas
-    scatterplot = ScatterPlot(Color.GREY1, 'scatter_test', radius=2, alpha=0.3)
+    scatterplot = ScatterPlot(Color.BLACK, 'scatter_test', radius=1, alpha=0.3)
     
     def update_scatterplot():
-        scatterplot.add_data(np.random.normal(0,1,2), check_domain=True)
+        scatterplot.add_data(np.random.normal(0,1,2))
     
     
     app.add_plot_funcs(update_scatterplot)
@@ -191,16 +191,16 @@ def main():
         width=60, height=20),
     
     Slider(
-        app, 'xdom_min', domain=(-5, 6), default=-0.5, pos=(10, 130),
+        app, 'xdom_min', domain=(-5, 6), default=-0.3, pos=(10, 130),
         width=60, height=20),
     Slider(
-        app, 'xdom_max', domain=(-5, 6), default=0.5, pos=(10, 145),
+        app, 'xdom_max', domain=(-5, 6), default=0.3, pos=(10, 145),
         width=60, height=20),
     Slider(
-        app, 'ydom_min', domain=(-5, 6), default=-0.5, pos=(10, 175),
+        app, 'ydom_min', domain=(-5, 6), default=-0.3, pos=(10, 175),
         width=60, height=20),
     Slider(
-        app, 'ydom_max', domain=(-5, 6), default=0.5, pos=(10, 190),
+        app, 'ydom_max', domain=(-5, 6), default=0.3, pos=(10, 190),
         width=60, height=20),
     
     Label('ScatterPlot', pos=(10,335), width=80, height=18, hcenter=True, vcenter=True),
