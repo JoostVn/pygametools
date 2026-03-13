@@ -12,8 +12,8 @@ from pygametools.color.color import Color
 from pygametools.plots.elements import Canvas
 from pygametools.gui.base import Application
 import pygame
-from pygametools.gui.elements import Button, Slider, Label
-from pygametools.plots.plot_types import ScatterPlot
+from pygametools.gui.elements import Button, CheckBox, Slider, Label, TextBox
+from pygametools.plots.plot_types import PlotType, ScatterPlot
 
 class PlotTestApp(Application):
 
@@ -22,6 +22,7 @@ class PlotTestApp(Application):
         self.canvas: Canvas = None  # type: ignore[assignment]
         
         self.update_funcs = []
+        self.enable_funcs = []
         
         # Slider values
         self._plot_xpos = 0
@@ -35,8 +36,11 @@ class PlotTestApp(Application):
         self._num_yticks = 0
         self._num_xticks = 0
         
-    def add_update_func(self, func: Callable):
-        self.update_funcs.append(func)
+        # Checkbox values
+        self._enable_scatterplot = False
+        
+    def add_plot_funcs(self, update_func: Callable):
+        self.update_funcs.append(update_func)
         
     def update(self):
         for func in self.update_funcs:
@@ -153,13 +157,15 @@ def main():
     canvas.axisy.tick_num = 6
     
     # Create plots to add to canvas
-    sp = ScatterPlot(Color.GREY1, 'scatter_test', radius=2, alpha=0.3)
+    scatterplot = ScatterPlot(Color.GREY1, 'scatter_test', radius=2, alpha=0.3)
     
-    def update_sp():
-        sp.add_data(np.random.normal(0,1,2), check_domain=True)
+    def update_scatterplot():
+        scatterplot.add_data(np.random.normal(0,1,2), check_domain=True)
     
-    app.add_update_func(update_sp)
-    canvas.add_plot(sp)
+    
+    app.add_plot_funcs(update_scatterplot)
+    
+    canvas.add_plot(scatterplot)
     
     # Add canvas to app and set GUI
     app.canvas = canvas
@@ -175,7 +181,7 @@ def main():
         app, 'plot_xdim', domain=(80, 450), default=300, pos=(10, 40),
         width=60, height=20),
     Slider(
-        app, 'plot_ydim', domain=(80, 390), default=200, pos=(10, 55),
+        app, 'plot_ydim', domain=(80, 320), default=200, pos=(10, 55),
         width=60, height=20),
     Slider(
         app, 'num_xticks', domain=(1, 20), default=6, pos=(10, 85),
@@ -196,6 +202,9 @@ def main():
     Slider(
         app, 'ydom_max', domain=(-5, 6), default=0.5, pos=(10, 190),
         width=60, height=20),
+    
+    Label('ScatterPlot', pos=(10,335), width=80, height=18, hcenter=True, vcenter=True),
+    CheckBox(scatterplot, 'enabled', default=False, pos=(10, 360))
     ])
     
     app.run()

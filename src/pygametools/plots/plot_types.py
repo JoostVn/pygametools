@@ -24,7 +24,9 @@ class PlotType(ABC):
     def __init__(self, color: tuple, label: str):
         self.color = color
         self.label = label
+        
         self._on_data_added: Callable | None = None
+        self.enabled: bool = True
 
     @abstractmethod
     def draw(self, ctx: DrawContext): ...
@@ -49,7 +51,7 @@ class ScatterPlot(PlotType):
             self._on_data_added(points)
 
     def draw(self, ctx: DrawContext):
-        if self.data.shape[0] == 0:
+        if not self.enabled or self.data.shape[0] == 0:
             return
     
         for xy in self.data:
