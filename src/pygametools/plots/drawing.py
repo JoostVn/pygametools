@@ -134,7 +134,7 @@ class PlotRenderer:
         self.surface_canvas.fill(theme.colors["canvas_bg"])
         self.surface_axes.fill(theme.colors["axes_bg"])
 
-    def draw(self, surface: pygame.Surface, metrics: PlotMetrics):
+    def draw(self, metrics: PlotMetrics, surface: pygame.Surface):
         """Blit axes onto canvas, then canvas onto the target surface."""
         self.surface_canvas.blit(
             self.surface_axes,
@@ -143,9 +143,9 @@ class PlotRenderer:
 
     def get_surface_pos(
             self,
+            metrics: PlotMetrics,
             pos: npt.ArrayLike,
-            on_axes: bool,
-            metrics: PlotMetrics) -> tuple[pygame.Surface, npt.NDArray]:
+            on_axes: bool) -> tuple[pygame.Surface, npt.NDArray]:
         """
         Return either the canvas or axes surface and convert coordinates.
 
@@ -178,22 +178,22 @@ class PlotRenderer:
 
     def line(
             self,
+            metrics: PlotMetrics,
             pos: npt.ArrayLike,
             col: tuple[int, int, int],
-            metrics: PlotMetrics,
             on_axes: bool = True):
         """Draw a line between two points in pos given as [[x1, y1], [x2, y2]]."""
-        draw_surface, draw_pos = self.get_surface_pos(pos, on_axes, metrics)
+        draw_surface, draw_pos = self.get_surface_pos(metrics, pos, on_axes)
         p1, p2 = tuple(draw_pos[0].astype(int)), tuple(draw_pos[1].astype(int))
         pygame.draw.aaline(draw_surface, col, p1, p2)
        
 
     def vector(
             self,
+            metrics: PlotMetrics,
             pos: npt.ArrayLike,
             vector: npt.ArrayLike,
             col: tuple[int, int, int],
-            metrics: PlotMetrics,
             on_axes: bool = True):
         """
         Draw a vector from a given pos and direction.
@@ -201,15 +201,15 @@ class PlotRenderer:
         pos can be in graph or canvas coordinates; vector is always in pygame
         coordinates. Useful for fixed-size elements like axis ticks.
         """
-        draw_surface, draw_pos = self.get_surface_pos(pos, on_axes, metrics)
+        draw_surface, draw_pos = self.get_surface_pos(metrics, pos, on_axes)
         end = (draw_pos + np.asarray(vector)).astype(int)
         pygame.draw.line(draw_surface, col, tuple(draw_pos.astype(int)), tuple(end))
 
     def point(
             self,
+            metrics: PlotMetrics,
             pos: npt.ArrayLike,
             col: tuple[int, int, int],
-            metrics: PlotMetrics,
             radius: int,
             alpha: float = 1,
             on_axes: bool = True):
@@ -218,7 +218,7 @@ class PlotRenderer:
         Uses a per-point SRCALPHA temp surface so that overlapping semi-transparent
         circles accumulate opacity correctly via src-over compositing on blit.
         """
-        draw_surface, draw_pos = self.get_surface_pos(pos, on_axes, metrics)
+        draw_surface, draw_pos = self.get_surface_pos(metrics, pos, on_axes)
         x, y = tuple(draw_pos.astype(int))
         rgba = (*col[:3], int(round(255 * alpha)))
         size = radius * 2 + 1
@@ -231,9 +231,9 @@ class PlotRenderer:
 
     def polyline(
             self,
+            metrics: PlotMetrics,
             points: npt.ArrayLike,
-            col: tuple[int, int, int],
-            metrics: PlotMetrics):
+            col: tuple[int, int, int]):
         """Draw a connected polyline through an (N, 2) array of graph-coordinate points."""
         pts = np.asarray(points, dtype=float)
         if len(pts) < 2:
@@ -245,14 +245,14 @@ class PlotRenderer:
 
     def rect(
             self,
+            metrics: PlotMetrics,
             pos: npt.ArrayLike,
             dim: npt.ArrayLike,
-            metrics: PlotMetrics,
             facecol: tuple[int, int, int] | None = None,
             linecol: tuple[int, int, int] | None = None,
             on_axes: bool = True):
 
-        draw_surface, draw_pos = self.get_surface_pos(pos, on_axes, metrics)
+        draw_surface, draw_pos = self.get_surface_pos(metrics, pos, on_axes)
         rect = pygame.Rect(*draw_pos, *dim)
 
         if facecol is not None:
@@ -262,13 +262,13 @@ class PlotRenderer:
 
     def text(
             self,
+            metrics: PlotMetrics,
             text: str,
             font: pygame.font.Font,
             col: tuple[int, int, int],
             pos: npt.ArrayLike,
             ha: Literal["left", "center", "right"],
             va: Literal["top", "center", "bottom"],
-            metrics: PlotMetrics,
             offset: npt.ArrayLike = (0, 0),
             on_axes: bool = True):
         """
@@ -281,7 +281,7 @@ class PlotRenderer:
                 prevent overlap with data or ticks. The default is (0,0).
         """
 
-        draw_surface, draw_pos = self.get_surface_pos(pos, on_axes, metrics)
+        draw_surface, draw_pos = self.get_surface_pos(metrics, pos, on_axes)
 
         text_block = font.render(text, True, col)
         text_rect = text_block.get_rect()

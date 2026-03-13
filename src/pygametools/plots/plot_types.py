@@ -60,7 +60,7 @@ class ScatterPlot(PlotType):
             return
     
         for xy in self.data:
-            ctx.renderer.point(xy, self.color, ctx.metrics, self.radius, self.alpha)
+            ctx.renderer.point(ctx.metrics, xy, self.color, self.radius, self.alpha)
 
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
         pass
@@ -84,7 +84,7 @@ class LinePlot(PlotType):
     def draw(self, ctx: DrawContext):
         if not self.enabled or self.data.shape[0] < 2:
             return
-        ctx.renderer.polyline(self.data, self.color, ctx.metrics)
+        ctx.renderer.polyline(ctx.metrics, self.data, self.color)
 
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
         pass

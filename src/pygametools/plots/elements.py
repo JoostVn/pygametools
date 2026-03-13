@@ -71,7 +71,7 @@ class Canvas:
 
         # Border around the whole canvas
         ctx.renderer.rect(
-            np.array([0, 0]), ctx.metrics.dim, ctx.metrics,
+            ctx.metrics, np.array([0, 0]), ctx.metrics.dim,
             facecol=ctx.theme.colors["canvas_bg"],
             linecol=ctx.theme.colors["canvas_line"],
             on_axes=False)
@@ -79,7 +79,7 @@ class Canvas:
         for element in self._elements:
             element.draw(ctx)
 
-        ctx.renderer.draw(surface, ctx.metrics)
+        ctx.renderer.draw(ctx.metrics, surface)
 
     def add_plot(self, plot: PlotType):
         """Register a plot element and wire up its data-added callback."""
@@ -229,7 +229,7 @@ class Axes(Element):
 
     def draw(self, ctx: DrawContext):
         ctx.renderer.rect(
-            ctx.metrics.axes_pos - 1, ctx.metrics.axes_dim + 2, ctx.metrics,
+            ctx.metrics, ctx.metrics.axes_pos - 1, ctx.metrics.axes_dim + 2,
             facecol=ctx.theme.colors["axes_bg"],
             linecol=ctx.theme.colors["axes_line"],
             on_axes=False)
@@ -308,12 +308,11 @@ class Axis(Element):
 
         for pos, label in zip(self._tick_pos, self._labels):
             ctx.renderer.vector(
-                pos, tick_vector, ctx.theme.colors["axes_line"],
-                ctx.metrics, on_axes=False)
+                ctx.metrics, pos, tick_vector, ctx.theme.colors["axes_line"],
+                on_axes=False)
             ctx.renderer.text(
-                label, font, color, pos,
-                self.text_ha, self.text_va, ctx.metrics,
-                text_offset, on_axes=False)    
+                ctx.metrics, label, font, color, pos,
+                self.text_ha, self.text_va, text_offset, on_axes=False)    
     
     # ---- Properties settable from the API
     @property
@@ -419,8 +418,8 @@ class Title(Element):
     def draw(self, ctx: DrawContext):
         font, color = ctx.theme.fonts["title"]
         ctx.renderer.text(
-            self.title, font, color, self.pos,
-            ha="center", va="center", metrics=ctx.metrics, on_axes=False)
+            ctx.metrics, self.title, font, color, self.pos,
+            ha="center", va="center", on_axes=False)
 
 
 class Legend(Element):

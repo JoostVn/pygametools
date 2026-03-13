@@ -47,11 +47,9 @@ Some general formatting rules to keep in mind during the refactor:
 4. `PlotRenderer` refactor
     - ✅ Remove `parent_canvas` reference; `PlotRenderer.__init__` takes `dim` and `axes_dim` directly. Canvas calls `pr.resize(dim, axes_dim)` when metrics change.
     - ✅ Surface selection is internal to `PlotRenderer` (via `get_surface_pos` and `on_axes` flag).
-    - Enforce strict input types: `CoordinatePair` for individual positions, `CoordinateArray` for bulk data. No implicit conversion. 
-    - Decide whether to add numpy array to `Domain` in `types.py`.
     - Replace the `on_axes: bool` flag pattern with two explicit draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates. Remove `get_surface_pos`.
     - Extract coordinate conversion into `_graph_to_canvas(pos, metrics) -> CoordinatePair` as a private method on `PlotRenderer`.
-    - Make `metrics` the second positional argument (after `self`) in all draw methods for consistency.
+    - ✅ Make `metrics` the second positional argument (after `self`) in all draw methods for consistency.
 
 5. more features to the existing elements:
     - Text labels for ticks.
