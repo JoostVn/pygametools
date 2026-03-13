@@ -69,19 +69,20 @@ Some general formatting rules to keep in mind during the refactor:
 9. Implement `Grid` element.
 
 10. Improve the test/example script `examples\plots_dev.py`:
-    - GUI sliders for plot metrics for easy testing.
+    - ✅ GUI sliders for plot metrics for easy testing.
     - Dynamic and static data examples:
-        - Random walk (dynamic line)
+        - ✅ Random walk (dynamic line)
         - Double dice throw (dynamic bar)
         - GIF (dynamic array)
         - Test image (static array)
-        - Normal distribution draws (dynamic scatter)
+        - ✅ Normal distribution draws (dynamic scatter)
 
 11. Make sure all type hinting is correct and consistent
 
 12. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
 
-
+13. Further improvements:
+    - Make sure the grid/axis ticks always include exacly 0 if it's in the domains.
 
 ## Dependency Tree
 
