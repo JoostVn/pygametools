@@ -123,7 +123,7 @@ The `plots` module, for the most part, follows Matplotlib terminology.
 | `Grid` | Optional lines extending from ticks across the axes area. |
 | `PlotTheme` | Holds color and font configuration. |
 | `PlotRenderer` | Owns the two Pygame surfaces; sole drawing layer. |
-| `DrawContext` | Lightweight dataclass bundling `PlotRenderer`, `PlotMetrics`, and `PlotTheme`. Passed to element draw calls so elements need no permanent references to any of the three. |
+| `DrawContext` | Lightweight dataclass bundling `PlotRenderer`, `PlotMetrics`, and `PlotTheme`. Passed to element draw calls so elements need no permanent reference to the `PlotMetrics` object itself. |
 | `Element` | Abstract base class for all drawable plot elements. |
 | `LinePlot` / `ScatterPlot` / `BarPlot` / `ArrayPlot` | Concrete plot-data elements that hold data. |
 
@@ -210,7 +210,7 @@ The `plots` module, for the most part, follows Matplotlib terminology.
 - `Canvas` acts as the mediator: `_on_metrics_changed` calls `on_metrics_changed(metric_name, metrics)` on all registered `Element` instances so they can recompute their layout.
 - `PlotMetrics` exposes public **getters only** so elements can read metrics but not write to them. Derived computed properties (`axes_pos`, `axes_dim`, etc.) also live on `PlotMetrics` for internal element use.
 - `Canvas` additionally exposes a subset of derived properties as read-only pass-throughs (`axes_pos`, `axes_dim`, `xdom_span`, `ydom_span`) for external use. `_ctx` is private, so external code cannot bypass `Canvas` to reach `PlotMetrics` directly.
-- Each `Element` receives the metric name and the `PlotMetrics` instance as arguments and only reads from it — elements hold no permanent reference to `PlotMetrics`.
+- Each `Element` receives the metric name and the `PlotMetrics` instance as arguments and only reads from it — elements hold no permanent reference to the `PlotMetrics` object. Caching derived values computed from metrics (e.g. numpy arrays for tick positions) is fine, as long as those caches are refreshed in `on_metrics_changed`.
 - `PlotMetrics` holds only high-level shared layout data that multiple elements need. Element-specific config (e.g. title padding, tick length) lives as attributes on the element itself. `PlotTheme` holds colors and fonts only.
 
 #### List of metrics
