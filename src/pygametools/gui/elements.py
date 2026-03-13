@@ -137,7 +137,7 @@ class Button(Element):
            State.HOOVER: {
                'face':self.theme['2'],
                'edge':self.theme['3'],
-               'font':self.theme['6']},
+               'font':self.theme['5']},
            State.TRIGGERED: {
                'face':self.theme['3'],
                'edge':self.theme['background'],
