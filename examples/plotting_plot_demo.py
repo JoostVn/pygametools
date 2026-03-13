@@ -1,6 +1,6 @@
 import numpy as np
 from pygametools.color import Color
-from pygametools.plotting import Canvas, colorpreview, PlotTester
+from pygametools.plotting import Canvas, PlotTester
 from pygametools.plotting.plots import Line, Scatter, Bar, ArrayImage
 from PIL import Image, ImageSequence
 
@@ -65,7 +65,7 @@ def plot_testimg(tester, pos, dim):
     canvas.set_title('Static Array image')
 
     # Loading/normalizing image and adding noise
-    with open('./examples/plotting_test_resources/test_img.csv', 'r', encoding='utf-8-sig') as file:
+    with open(r'examples\plotting_test_resources\test_img.csv', 'r', encoding='utf-8-sig') as file:
         value_arr = np.genfromtxt(file, dtype=float, delimiter=';')
     value_arr = (value_arr / value_arr.max())
     value_arr = value_arr + np.random.uniform(-0.2,0.2,size=value_arr.shape)
@@ -86,12 +86,13 @@ def plot_gif(tester, pos, dim):
     canvas.set_title('GIF test')
 
     # Loading gif frames
-    img = Image.open('./examples/plotting_test_resources/ra.gif')
+    img = Image.open(r'examples\plotting_test_resources\earth.gif')
     frames = []
     for frame in ImageSequence.Iterator(img):
         rgb_frame = np.array(frame.copy().convert('RGB').getdata(),dtype=np.uint8)
         rgb_frame = rgb_frame.reshape(frame.size[1],frame.size[0],3) / 255
         frames.append(rgb_frame)
+        
     gif_frames = np.stack(frames)
 
     # Creating plot
@@ -111,6 +112,7 @@ def plot_gif(tester, pos, dim):
             self.i += 1
             if not self.i < len(self.gif_frames):
                 self.i = 0
+                
 
     # Adding canvas and update function to tester
     tester.add_dynamic(canvas, GifUpdate(plot, gif_frames))

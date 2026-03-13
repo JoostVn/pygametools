@@ -4,9 +4,9 @@ import time
 from abc import ABC, abstractmethod
 from .file_manager import load_theme
 import sys
-# import pkg_resources
 from importlib.resources import files
 from enum import Enum
+from pygametools.fonts import load_font
 
 
 class State(Enum):
@@ -47,14 +47,14 @@ class Ticker:
         """
         Returns all current stats values as a list of printeable strings
         """
-        t_min = self.hist.min().round(2)
-        t_max = self.hist.max().round(2)
-        t_avg = self.hist.mean().round(2)
+        t_min = int(10 * self.hist.min().round(2))
+        t_max = int(10 * self.hist.max().round(2))
+        t_avg = int(10 * self.hist.mean().round(2))
         stats_list = []
-        tick_str = 'load min/max/avg: '
-        tick_str += str(t_min if t_min < 1 else '>1,0').ljust(4) + '/'
-        tick_str += str(t_max if t_max < 1 else '>1.0').ljust(4) + '/'
-        tick_str += str(t_avg if t_avg < 1 else '>1.0').ljust(4)
+        tick_str = ''
+        tick_str += ('min:' + str(t_min if t_min <= 100 else 'OF').ljust(2, '0'))
+        tick_str += ('/max:' + str(t_max if t_max <= 100 else 'OF').ljust(2, '0'))
+        tick_str += ('/avg:' + str(t_avg if t_avg <= 100 else 'OF').ljust(2, '0'))
         stats_list.append(tick_str)
         return stats_list
 
@@ -68,7 +68,11 @@ class Application(ABC):
     # TODO: ticker stats font
 
     def __init__(
-            self, window_size, tick_len=1/30, name='Application', theme_name='default'):
+            self,
+            window_size: tuple,
+            tick_len: float=1/30,
+            name: str='Application',
+            theme_name: str='default'):
         """
         Handles the main Pygame window, events, and ticks.
 
@@ -97,7 +101,7 @@ class Application(ABC):
         # Loading theme, background color and font
         self.theme = load_theme(theme_name)
         self.set_theme()
-        self.font_debug = pygame.font.SysFont('monospace', 12)
+        self.font_debug = load_font('JetBrainsMono-Medium.ttf', 9)
 
         # Creating key events dict
         self.key_events = {'up': [],'down': [],'hold': []}
@@ -107,7 +111,7 @@ class Application(ABC):
         self.zoom = 1
 
         # Defining screen
-        self.screen = pygame.display.set_mode(self.window_size)
+        self.screen = pygame.display.set_mode(window_size)
 
     @property
     def mouse_pos_draw(self) -> tuple[int, int]:
