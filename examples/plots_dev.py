@@ -156,7 +156,7 @@ def main():
     sp = ScatterPlot(Color.GREY1, 'scatter_test', radius=2, alpha=0.3)
     
     def update_sp():
-        sp.add_data(np.random.normal(0,1,2))
+        sp.add_data(np.random.normal(0,1,2), check_domain=True)
     
     app.add_update_func(update_sp)
     canvas.add_plot(sp)

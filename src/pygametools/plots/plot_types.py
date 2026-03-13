@@ -41,11 +41,11 @@ class ScatterPlot(PlotType):
         self.alpha = alpha
         self.data = np.empty((0,2))
 
-    def add_data(self, points: XYPlotData):
+    def add_data(self, points: XYPlotData, check_domain: bool = False):
         points = np.reshape(points, (-1, 2))
         self.data = np.vstack([self.data, points])
         
-        if self._on_data_added:
+        if self._on_data_added and check_domain:
             self._on_data_added(points)
 
     def draw(self, ctx: DrawContext):
