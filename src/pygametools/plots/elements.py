@@ -138,35 +138,107 @@ class Axis(Element):
     def __init__(self, orientation: int, **kwargs):
         """
         Axis element containing ticks and labels.
-
-        Args:
-            orientation: `Axis.X` or `Axis.Y`
         """
         self.orientation = orientation
         self.tick_margin = kwargs.get("margin", 0.1)
         self.tick_length = kwargs.get("length", 3)
-        self.num_ticks = kwargs.get("num_ticks", 6)
-        self.pos_ticks = np.zeros((0, 2))
-        self.labels = None
+        
+        # Cached derived properties from PlotMetrics
+        self._dom = np.zeros(2)
+        self._span = 0
+        self._axes_dim = np.zeros(2)
+        self._axis_line_endpoints = np.zeros((2,2))
 
+        # Private attributes
+        self._tick_num = kwargs.get("num_ticks", 6)
+        self._tick_pos = np.zeros((0, 2))
+        self._labels = []
+        
         # Tick mode: either fixed locations or fixed values
         self.tick_mode = None
+        
+        # Label mode: either numberical or text
         self.label_mode = None
-
-        # Most recent metrics snapshot; set on first on_metrics_changed call.
-        self._metrics: PlotMetrics | None = None
-
+        
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
-        """Recompute tick positions and labels whenever layout or domain changes."""
-        self._metrics = metrics
-        self._recompute_ticks(metrics)
+        """
+        Recompute tick positions and labels whenever layout or domain changes.
+        
+        Some derived properties of metrics will be cached such that API-accessable 
+        setters can work properly.
+        """
+        # Calculate/cache plot metrics
+        self._dom = metrics.xdom if self.orientation == Axis.X else metrics.ydom
+        self._span = metrics.xdom_span if self.orientation == Axis.X else metrics.ydom_span
+        self._axes_dim = metrics.axes_dim
+        self._axis_line_endpoints = np.vstack([
+            metrics.axes_sw,
+            metrics.axes_sw + self.axis_direction * metrics.axes_dim])
+                
+        # Recompute tick positions
+        if self.tick_mode == Axis.FIXED_TICK_POSITIONS:
+            self._compute_fixed_tick_num_coordinates()
+        elif self.tick_mode == Axis.FIXED_TICK_VALUES:
+            self._compute_fixed_tick_val_coordinates()
+        
+        # Recompute labels
+        if self.label_mode == Axis.LABELS_NUMERICAL:
+            self._update_numerical_labels()
+        
+    def draw(self, ctx: DrawContext):
+        if self._labels is None or len(self._labels) == 0:
+            return
 
-    def _dom(self, metrics: PlotMetrics) -> npt.NDArray[np.float64]:
-        return metrics.xdom if self.orientation == Axis.X else metrics.ydom
+        tick_vector = self.tick_direction * self.tick_length
+        font, color = ctx.theme.fonts["tick"]
+        text_offset = self.tick_direction * (2 + self.tick_length)
 
-    def _span(self, metrics: PlotMetrics) -> float:
-        return float(np.diff(self._dom(metrics))[0])
-
+        for pos, label in zip(self._tick_pos, self._labels):
+            ctx.renderer.vector(
+                pos, tick_vector, ctx.theme.colors["axes_line"],
+                ctx.metrics, on_axes=False)
+            ctx.renderer.text(
+                label, font, color, pos,
+                self.text_ha, self.text_va, ctx.metrics,
+                text_offset, on_axes=False)    
+    
+    # ---- Properties settable from the API
+    @property
+    def tick_num(self):
+        return self._tick_num
+        
+    @tick_num.setter
+    def tick_num(self, val: int):
+        """Set a fixed number of evenly spaced tick locations."""
+        self.tick_mode = Axis.FIXED_TICK_POSITIONS
+        self.label_mode = Axis.LABELS_NUMERICAL
+        self._tick_num = val
+        
+        self._compute_fixed_tick_num_coordinates()
+        if self.label_mode == Axis.LABELS_NUMERICAL:
+            self._update_numerical_labels()
+        
+    @property 
+    def tick_pos(self):
+        return self._tick_pos
+    
+    @tick_pos.setter
+    def tick_pos(self, val: npt.NDArray[np.float64]):
+        """Set custom ticks fixed positions."""
+        self.tick_mode = Axis.FIXED_TICK_VALUES
+        raise NotImplementedError
+    
+    @property
+    def labels(self):
+        return self._labels
+    
+    @labels.setter
+    def labels(self, val: tuple[str]):
+        self.label_mode = Axis.LABELS_TEXT
+        self._labels = val
+        
+    
+    # ---- Properties/methods that fetch the correct metrics based on orientation
     @property
     def text_va(self) -> Literal['bottom', 'center']:
         return 'bottom' if self.orientation == Axis.X else 'center'
@@ -177,93 +249,46 @@ class Axis(Element):
 
     @property
     def tick_direction(self) -> np.ndarray:
+        """Return a vector in the direction of ticks, from away from the axes."""
         return np.array((0, 1)) if self.orientation == Axis.X else np.array((-1, 0))
 
     @property
     def axis_direction(self) -> np.ndarray:
+        """Return a vector in the direction of the axis, starting at the SW point."""
         return np.array((1, 0)) if self.orientation == Axis.X else np.array((0, -1))
+       
+    # ---- Compute ticks, axis endpoints and labels
+        
+    def _compute_fixed_tick_num_coordinates(self):
+        """Calculate the coordinates of ticks based on the amount."""
+        outer_tick_offset = self.axis_direction * self.tick_margin * self._axes_dim
+        self._tick_pos = np.linspace(
+            start=self._axis_line_endpoints[0] + outer_tick_offset,
+            stop=self._axis_line_endpoints[1] - outer_tick_offset,
+            num=self.tick_num,
+            endpoint=True)
+        
+    def _compute_fixed_tick_val_coordinates(self):
+         """Calculate the coordinates of ticks based on their values."""
+         raise NotImplementedError   
 
-    def _recompute_ticks(self, metrics: PlotMetrics):
-        """Recalculate tick positions and numerical labels."""
-        axis_line_endpoints = np.vstack([
-            metrics.axes_sw,
-            metrics.axes_sw + self.axis_direction * metrics.axes_dim])
-
-        if self.tick_mode == Axis.FIXED_TICK_POSITIONS:
-            offset = self.axis_direction * self.tick_margin * metrics.axes_dim
-            self.pos_ticks = np.linspace(
-                axis_line_endpoints[0] + offset,
-                axis_line_endpoints[1] - offset,
-                self.num_ticks,
-                endpoint=True)
-
-        elif self.tick_mode == Axis.FIXED_TICK_VALUES:
-            raise NotImplementedError
-
-        if self.label_mode == Axis.LABELS_NUMERICAL:
-            self._update_numerical_labels(metrics)
-        elif self.label_mode == Axis.LABELS_TEXT:
-            raise NotImplementedError
-
-    def _update_numerical_labels(self, metrics: PlotMetrics):
+    def _update_numerical_labels(self):
         """Format tick labels based on the current domain magnitude."""
-        dom = self._dom(metrics)
-        span = self._span(metrics)
         numbers = np.linspace(
-            dom[0] + span * self.tick_margin,
-            dom[1] - span * self.tick_margin,
-            num=self.num_ticks,
+            self._dom[0] + self._span * self.tick_margin,
+            self._dom[1] - self._span * self.tick_margin,
+            num=self._tick_num,
             endpoint=True)
 
         order_of_magnitude = floor(log10(max(abs(numbers))))
 
         if -4 < order_of_magnitude < 5:
             round_to = max(0, 1 - order_of_magnitude)
-            self.labels = [f"%.{round_to}f" % x for x in numbers]
+            self._labels = [f"%.{round_to}f" % x for x in numbers]
         else:
-            self.labels = [
+            self._labels = [
                 np.format_float_scientific(x, precision=0, trim='-', sign=False)
                 for x in numbers]
-
-    def set_tick_num(self, num_ticks: int):
-        """
-        Set a fixed number of evenly spaced tick locations.
-        Ticks will change their value to keep their relative location.
-        """
-        self.tick_mode = Axis.FIXED_TICK_POSITIONS
-        self.label_mode = Axis.LABELS_NUMERICAL
-        self.num_ticks = num_ticks
-        if self._metrics is not None:
-            self._recompute_ticks(self._metrics)
-
-    def set_tick_pos(self, ticks: npt.NDArray, labels: list[str] | None = None):
-        """
-        Set custom ticks fixed positions with optional string labels.
-        Ticks will change their location to retain their value.
-        """
-        self.tick_mode = Axis.FIXED_TICK_VALUES
-        self.label_mode = Axis.LABELS_TEXT
-        raise NotImplementedError
-
-    def set_labels(self, labels: tuple):
-        pass
-
-    def draw(self, ctx: DrawContext):
-        if self.labels is None or len(self.labels) == 0:
-            return
-
-        tick_vector = self.tick_direction * self.tick_length
-        font, color = ctx.theme.fonts["tick"]
-        text_offset = self.tick_direction * (2 + self.tick_length)
-
-        for pos, label in zip(self.pos_ticks, self.labels):
-            ctx.renderer.vector(
-                pos, tick_vector, ctx.theme.colors["axes_line"],
-                ctx.metrics, on_axes=False)
-            ctx.renderer.text(
-                label, font, color, pos,
-                self.text_ha, self.text_va, ctx.metrics,
-                text_offset, on_axes=False)
 
 
 class Title(Element):

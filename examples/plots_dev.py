@@ -86,9 +86,8 @@ class PlotTestApp(Application):
     
     @num_xticks.setter
     def num_xticks(self, val: int | float):
-        val = int(val)
-        self._num_xticks = val
-        self.plot.axisx.set_tick_num(val)
+        self._num_xticks = int(val)
+        self.plot.axisx.tick_num = self._num_xticks
     
     @property
     def num_yticks(self):
@@ -97,7 +96,7 @@ class PlotTestApp(Application):
     @num_yticks.setter
     def num_yticks(self, val):
         self._num_yticks = int(val)
-        self.plot.axisy.set_tick_num(self._num_yticks)
+        self.plot.axisy.tick_num = self._num_yticks
 
     @property
     def xdom_min(self):
@@ -156,8 +155,8 @@ def main():
         xdom=(-5,10),
         ydom=(-5,10),
         title="Test plot title")
-    canvas.axisx.set_tick_num(11)
-    canvas.axisy.set_tick_num(6)
+    canvas.axisx.tick_num = 11
+    canvas.axisy.tick_num = 6
     
     # Add plot to app and set GUI
     app.plot = canvas

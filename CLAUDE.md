@@ -17,7 +17,7 @@ Some general formatting rules to keep in mind during the refactor:
 
 - Proper typehinting using numpy.typing and the `plots\types.py` module
 - Make sure that private attributes and methods are prefixed by an underscore.
-- Implement getters and setters for attributes with additional logic (instead of dedicated methods like `set_num_ticks`).
+- Implement getters and setters for attributes with additional logic (instead of dedicated methods like `set_tick_num`).
 
 1. `DrawContext` class and module
     - ✅ Implement `DrawContext` as a simple dataclass holding `renderer: PlotRenderer`, `metrics: PlotMetrics`, `theme: PlotTheme`.
@@ -32,17 +32,20 @@ Some general formatting rules to keep in mind during the refactor:
     - ✅ Remove all `Element` references from `PlotMetrics`; replace with a single `_on_change: Callable[[str], None]` callback to `Canvas`.
     - ✅ Add `Canvas._on_metrics_changed(metric_name: str | None)` as the mediator method that propagates changes to all registered elements.
     - ✅ Draw functions receive `DrawContext`; `on_metrics_changed` receives `metric_name` and `metrics`.
+    - ✅ Remove `Axis._metrics` — the only stored reference to `PlotMetrics` still left in an element. `_dom()` and `_span()` should be computed from the `metrics` argument passed to `on_metrics_changed`, not a cached copy.
+    - ✅ Replace `set_tick_num` / `set_tick_pos` dedicated methods with `tick_num` / `tick_pos` property setters (see general formatting rules).
+    
+3. Proper API exposure of metrics
     - Expose all metrics on `Canvas` as pass-through properties, making `Canvas` the sole public API for metric access:
-        - Settable properties with validation and `_on_metrics_changed` call: `pos`, `dim`, `xdom`, `ydom`, `axes_xpad`, `axes_ypad`.
-        - Read-only derived properties on `Canvas` (only those useful externally): `axes_pos`, `axes_dim`, `xdom_span`, `ydom_span`.
-        - Rename `ctx` → `_ctx` to prevent external code from bypassing Canvas.
-        - Remove the `_on_change` callback from `PlotMetrics`; Canvas setters write directly to `PlotMetrics` private attributes and call `_on_metrics_changed` themselves. Validation and numpy conversion move to Canvas setters.
-        - `PlotMetrics` stores private attributes (`_xdom`, `_dim`, etc.) with public **getters only** (no public setters) so elements can read but not write. Derived computed properties (`axes_pos`, `axes_dim`, etc.) stay on `PlotMetrics` for internal element use.
-        - Elements are read-only consumers of `PlotMetrics` — they receive `metrics` as a method argument and only read from it. This is enforced by convention; `_ctx` being private ensures external code cannot reach `metrics` at all.
-    - Remove `Axis._metrics` — the only stored reference to `PlotMetrics` still left in an element. `_dom()` and `_span()` should be computed from the `metrics` argument passed to `on_metrics_changed`, not a cached copy.
-    - Replace `set_tick_num` / `set_tick_pos` dedicated methods with `num_ticks` / `tick_positions` property setters (see general formatting rules).
+    - Settable properties with validation and `_on_metrics_changed` call: `pos`, `dim`, `xdom`, `ydom`, `axes_xpad`, `axes_ypad`.
+    - Read-only derived properties on `Canvas` (only those useful externally): `axes_pos`, `axes_dim`, `xdom_span`, `ydom_span`.
+    - Rename `ctx` → `_ctx` to prevent external code from bypassing Canvas.
+    - Remove the `_on_change` callback from `PlotMetrics`; Canvas setters write directly to `PlotMetrics` private attributes and call `_on_metrics_changed` themselves. Validation and numpy conversion move to Canvas setters.
+    - `PlotMetrics` stores private attributes (`_xdom`, `_dim`, etc.) with public **getters only** (no public setters) so elements can read but not write. Derived computed properties (`axes_pos`, `axes_dim`, etc.) stay on `PlotMetrics` for internal element use.
+    - Elements are read-only consumers of `PlotMetrics` — they receive `metrics` as a method argument and only read from it. This is enforced by convention; `_ctx` being private ensures external code cannot reach `metrics` at all.
+   
 
-3. `PlotRenderer` refactor
+4. `PlotRenderer` refactor
     - ✅ Remove `parent_canvas` reference; `PlotRenderer.__init__` takes `dim` and `axes_dim` directly. Canvas calls `pr.resize(dim, axes_dim)` when metrics change.
     - ✅ Surface selection is internal to `PlotRenderer` (via `get_surface_pos` and `on_axes` flag).
     - Replace the `on_axes: bool` flag pattern with two explicit draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates. Remove `get_surface_pos`.
@@ -51,21 +54,21 @@ Some general formatting rules to keep in mind during the refactor:
     - Decide whether to add numpy array to `Domain` in `types.py`.
     - Make `metrics` the second positional argument (after `self`) in all draw methods for consistency.
 
-4. Add more features to the existing elements:
+5. more features to the existing elements:
     - Text labels for ticks.
     - Axis labels (single descriptive string per axis, X centered below tick labels, Y rotated 90°).
 
-5. Add `LinePlot`, `BarPlot`, and `ScatterPlot` plot types.
+6. Add `LinePlot`, `BarPlot`, and `ScatterPlot` plot types.
 
-6. Implement domain auto-expansion.
+7. Implement domain auto-expansion.
     - In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
     - Implement `Canvas._check_domain_expansion(x, y)` that updates `metrics.xdom` / `metrics.ydom` when new data falls outside the current domain.
 
-7. Complete `Legend` element (stub exists).
+8. Complete `Legend` element (stub exists).
 
-8. Implement `Grid` element.
+9. Implement `Grid` element.
 
-9. Improve the test/example script `examples\plots_dev.py`:
+10. Improve the test/example script `examples\plots_dev.py`:
     - GUI sliders for plot metrics for easy testing.
     - Dynamic and static data examples:
         - Random walk (dynamic line)
@@ -74,7 +77,7 @@ Some general formatting rules to keep in mind during the refactor:
         - Test image (static array)
         - Normal distribution draws (dynamic scatter)
 
-10. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
+11. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
 
 ## Dependency Tree
 
@@ -277,7 +280,7 @@ canvas.draw(screen)
 # Element-specific config lives on the element, not on Canvas
 canvas.title.padding = 12
 canvas.axisx.tick_length = 6
-canvas.axisx.num_ticks = 5
+canvas.axisx.tick_num = 5
 ```
 
 ## Supported Plot Types
