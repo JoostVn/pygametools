@@ -16,7 +16,7 @@ class PlotTheme:
         Plot color and font properties.
         """
         self.colors = {
-            "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY6),
+            "canvas_bg": kwargs.get("cols_canvas_bg", Color.GREY7),
             "canvas_line": kwargs.get("cols_canvas_line", Color.GREY3),
             "axes_bg": kwargs.get("cols_axes_bg", Color.WHITE),
             "axes_line": kwargs.get("cols_axes_line", Color.GREY3)}
