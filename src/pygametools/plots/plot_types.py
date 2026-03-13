@@ -70,7 +70,6 @@ class LinePlot(PlotType):
 
     def __init__(self, color: tuple, label: str, width: int = 1):
         super().__init__(color, label)
-        self.width = width
         self.data = np.empty((0, 2))
 
     def add_data(self, points: XYPlotData, check_domain: bool | None = None):
@@ -85,7 +84,7 @@ class LinePlot(PlotType):
     def draw(self, ctx: DrawContext):
         if not self.enabled or self.data.shape[0] < 2:
             return
-        ctx.renderer.polyline(self.data, self.color, ctx.metrics, self.width)
+        ctx.renderer.polyline(self.data, self.color, ctx.metrics)
 
     def on_metrics_changed(self, metric_name: str | None, metrics: PlotMetrics):
         pass

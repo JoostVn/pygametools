@@ -157,7 +157,7 @@ def main():
     canvas.axisy.tick_num = 6
     
     # Create plots to add to canvas
-    scatterplot = ScatterPlot(Color.BLACK, 'scatter_test', radius=1, alpha=0.3)
+    scatterplot = ScatterPlot(Color.BLACK, 'scatter_test', radius=2, alpha=0.3)
 
     def update_scatterplot():
         scatterplot.add_data(np.random.normal(0, 1, 2))
@@ -165,7 +165,7 @@ def main():
     app.add_plot_funcs(update_scatterplot)
     canvas.add_plot(scatterplot)
 
-    lineplot = LinePlot(Color.RED3, 'random_walk', width=1)
+    lineplot = LinePlot(Color.RED3, 'random_walk')
     _walk_x = [0.0]
     _walk_y = [0.0]
 

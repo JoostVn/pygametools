@@ -123,12 +123,12 @@ class PlotRenderer:
 
     def __init__(self, dim: npt.ArrayLike, axes_dim: npt.ArrayLike):
         self.surface_canvas = pygame.Surface(tuple(np.array(dim, dtype=int)))
-        self.surface_axes = pygame.Surface(tuple(np.array(axes_dim, dtype=int)))
+        self.surface_axes = pygame.Surface(tuple(np.array(axes_dim, dtype=int)), pygame.SRCALPHA)
 
     def resize(self, dim: npt.ArrayLike, axes_dim: npt.ArrayLike):
         """Recreate surfaces when canvas or axes dimensions change."""
         self.surface_canvas = pygame.Surface(tuple(np.array(dim, dtype=int)))
-        self.surface_axes = pygame.Surface(tuple(np.array(axes_dim, dtype=int)))
+        self.surface_axes = pygame.Surface(tuple(np.array(axes_dim, dtype=int)), pygame.SRCALPHA)
 
     def clear(self, theme: PlotTheme):
         """Reset draw surfaces to background colors before a new frame."""
@@ -182,11 +182,12 @@ class PlotRenderer:
             pos: MetricCoordinates,
             col: tuple,
             metrics: PlotMetrics,
-            width: int = 1,
             on_axes: bool = True):
         """Draw a line between two points in pos given as [[x1, y1], [x2, y2]]."""
         draw_surface, draw_pos = self.get_surface_pos(pos, on_axes, metrics)
-        pygame.draw.line(draw_surface, col, *draw_pos, width)
+        p1, p2 = tuple(draw_pos[0].astype(int)), tuple(draw_pos[1].astype(int))
+        pygame.draw.aaline(draw_surface, col, p1, p2)
+       
 
     def vector(
             self,
@@ -210,28 +211,30 @@ class PlotRenderer:
             pos: MetricCoordinates,
             col: tuple,
             metrics: PlotMetrics,
-            radius: int = 3,
+            radius: int,
             alpha: float = 1,
             on_axes: bool = True):
-        """Draw a filled circle at pos. If alpha < 1, blits via a temporary SRCALPHA surface."""
+        """Draw an anti-aliased filled circle at pos.
+
+        Uses a per-point SRCALPHA temp surface so that overlapping semi-transparent
+        circles accumulate opacity correctly via src-over compositing on blit.
+        """
         draw_surface, draw_pos = self.get_surface_pos(pos, on_axes, metrics)
         x, y = tuple(draw_pos.astype(int))
+        rgba = (*col[:3], int(round(255 * alpha)))
+        size = radius * 2 + 1
+        tmp = pygame.Surface((size, size), pygame.SRCALPHA)
         
-        if alpha < 1:
-            alpha_int = int(round(255 * alpha, 0))
-            size = radius * 2 + 1
-            tmp = pygame.Surface((size, size), pygame.SRCALPHA)
-            pygame.draw.circle(tmp, (*col[:3], alpha_int), (radius, radius), radius)
-            draw_surface.blit(tmp, (x - radius, y - radius))
-        else:
-            pygame.draw.circle(draw_surface, col, (x, y), radius)
+        pygame.gfxdraw.aacircle(tmp, radius, radius, radius, rgba)
+        pygame.gfxdraw.filled_circle(tmp, radius, radius, radius, rgba)
+        
+        draw_surface.blit(tmp, (x - radius, y - radius))
 
     def polyline(
             self,
             points: npt.ArrayLike,
             col: tuple,
-            metrics: PlotMetrics,
-            width: int = 1):
+            metrics: PlotMetrics):
         """Draw a connected polyline through an (N, 2) array of graph-coordinate points."""
         pts = np.asarray(points, dtype=float)
         if len(pts) < 2:
@@ -239,7 +242,7 @@ class PlotRenderer:
         rel_x = (pts[:, 0] - metrics.xdom[0]) / metrics.xdom_span
         rel_y = 1.0 - (pts[:, 1] - metrics.ydom[0]) / metrics.ydom_span
         pixel_pts = (np.column_stack([rel_x, rel_y]) * metrics.axes_dim).astype(int).tolist()
-        pygame.draw.lines(self.surface_axes, col, False, pixel_pts, width)
+        pygame.draw.aalines(self.surface_axes, col, False, pixel_pts)
 
     def rect(
             self,
