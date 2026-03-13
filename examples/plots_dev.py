@@ -6,16 +6,22 @@ TODO:
  - checkboxes for plot types (all in the same plot)
 """
 
+from typing import Callable
+import numpy as np
+from pygametools.color.color import Color
 from pygametools.plots.elements import Canvas
 from pygametools.gui.base import Application
 import pygame
 from pygametools.gui.elements import Button, Slider, Label
+from pygametools.plots.plot_types import ScatterPlot
 
 class PlotTestApp(Application):
 
     def __init__(self, window_size):
         super().__init__(window_size)
-        self.plot: Canvas = None  # type: ignore[assignment]
+        self.canvas: Canvas = None  # type: ignore[assignment]
+        
+        self.update_funcs = []
         
         # Slider values
         self._plot_xpos = 0
@@ -29,11 +35,15 @@ class PlotTestApp(Application):
         self._num_yticks = 0
         self._num_xticks = 0
         
+    def add_update_func(self, func: Callable):
+        self.update_funcs.append(func)
+        
     def update(self):
-        pass
+        for func in self.update_funcs:
+            func()
 
     def draw(self):
-        self.plot.draw(self.screen)
+        self.canvas.draw(self.screen)
         
     # GUI values
     @property
@@ -43,7 +53,7 @@ class PlotTestApp(Application):
     @plot_xpos.setter
     def plot_xpos(self, val: int | float):
         self._plot_xpos = int(val)
-        self.plot.pos = (self._plot_xpos, self.plot.pos[1])
+        self.canvas.pos = (self._plot_xpos, self.canvas.pos[1])
 
     @property
     def plot_ypos(self):
@@ -52,7 +62,7 @@ class PlotTestApp(Application):
     @plot_ypos.setter
     def plot_ypos(self, val: int | float):
         self._plot_ypos = int(val)
-        self.plot.pos = (self.plot.pos[0], self._plot_ypos)
+        self.canvas.pos = (self.canvas.pos[0], self._plot_ypos)
 
     @property
     def plot_xdim(self):
@@ -61,7 +71,7 @@ class PlotTestApp(Application):
     @plot_xdim.setter
     def plot_xdim(self, val: int | float):
         self._plot_xdim = int(val)
-        self.plot.dim = (self._plot_xdim, self.plot.dim[1])
+        self.canvas.dim = (self._plot_xdim, self.canvas.dim[1])
 
     @property
     def plot_ydim(self):
@@ -70,7 +80,7 @@ class PlotTestApp(Application):
     @plot_ydim.setter
     def plot_ydim(self, val: int | float):
         self._plot_ydim = int(val)
-        self.plot.dim = (self.plot.dim[0], self._plot_ydim)
+        self.canvas.dim = (self.canvas.dim[0], self._plot_ydim)
         
     @property
     def num_xticks(self):
@@ -79,7 +89,7 @@ class PlotTestApp(Application):
     @num_xticks.setter
     def num_xticks(self, val: int | float):
         self._num_xticks = int(val)
-        self.plot.axisx.tick_num = self._num_xticks
+        self.canvas.axisx.tick_num = self._num_xticks
     
     @property
     def num_yticks(self):
@@ -88,7 +98,7 @@ class PlotTestApp(Application):
     @num_yticks.setter
     def num_yticks(self, val):
         self._num_yticks = int(val)
-        self.plot.axisy.tick_num = self._num_yticks
+        self.canvas.axisy.tick_num = self._num_yticks
 
     @property
     def xdom_min(self):
@@ -97,7 +107,7 @@ class PlotTestApp(Application):
     @xdom_min.setter
     def xdom_min(self, val: float):
         self._xdom_min = -(10 ** val)
-        self.plot.xdom = (self._xdom_min, self.plot.xdom[1])
+        self.canvas.xdom = (self._xdom_min, self.canvas.xdom[1])
 
     @property
     def xdom_max(self):
@@ -106,7 +116,7 @@ class PlotTestApp(Application):
     @xdom_max.setter
     def xdom_max(self, val: float):
         self._xdom_max = 10 ** val
-        self.plot.xdom = (self.plot.xdom[0], self._xdom_max)
+        self.canvas.xdom = (self.canvas.xdom[0], self._xdom_max)
 
     @property
     def ydom_min(self):
@@ -115,7 +125,7 @@ class PlotTestApp(Application):
     @ydom_min.setter
     def ydom_min(self, val: float):
         self._ydom_min = -(10 ** val)
-        self.plot.ydom = (self._ydom_min, self.plot.ydom[1])
+        self.canvas.ydom = (self._ydom_min, self.canvas.ydom[1])
 
     @property
     def ydom_max(self):
@@ -124,7 +134,7 @@ class PlotTestApp(Application):
     @ydom_max.setter
     def ydom_max(self, val: float):
         self._ydom_max = 10 ** val
-        self.plot.ydom = (self.plot.ydom[0], self._ydom_max)
+        self.canvas.ydom = (self.canvas.ydom[0], self._ydom_max)
     
 
 def main():
@@ -132,7 +142,7 @@ def main():
     # Create app first so that pygame.init() is called early
     app = PlotTestApp(window_size=(600,400))
 
-    # Create test plot
+    # Create test canvas
     canvas = Canvas(
         pos=(150,10),
         dim=(300,200),
@@ -142,8 +152,17 @@ def main():
     canvas.axisx.tick_num = 11
     canvas.axisy.tick_num = 6
     
-    # Add plot to app and set GUI
-    app.plot = canvas
+    # Create plots to add to canvas
+    sp = ScatterPlot(Color.GREY4, 'scatter_test', radius=1)
+    
+    def update_sp():
+        sp.add_data(np.random.normal(0,1,2))
+    
+    app.add_update_func(update_sp)
+    canvas.add_plot(sp)
+    
+    # Add canvas to app and set GUI
+    app.canvas = canvas
 
     app.set_gui([
     Slider(

@@ -1,7 +1,8 @@
 import numpy as np
 import numpy.typing as npt
-from pygametools.plots.types import CoordinatePair, Domain
+from pygametools.plots.types import MetricCoordinatePair, Domain, XYPlotDataBatch
 from .drawing import PlotTheme, PlotMetrics, PlotRenderer, DrawContext
+from .plot_types import PlotType
 from pygametools.color import Color
 from abc import ABC, abstractmethod
 from math import floor, log10
@@ -28,7 +29,7 @@ class Canvas:
             ydom: Y-axis domain (min, max) in data coordinates
             kwargs: TODO: find out where kwargs are used and update docstring
         """
-        self._elements: list[Element] = []
+        self._elements: list[Element | PlotType] = []
 
         metrics = PlotMetrics(pos, dim, xdom, ydom)
         theme = PlotTheme(**kwargs)
@@ -79,13 +80,44 @@ class Canvas:
 
         ctx.renderer.draw(surface, ctx.metrics)
 
+    def add_plot(self, plot: PlotType):
+        """Register a plot element and wire up its data-added callback."""
+        plot._on_data_added = self._check_domain_expansion
+        self._elements.append(plot)
+        plot.on_metrics_changed(None, self._ctx.metrics)
+
+    def _check_domain_expansion(self, points: XYPlotDataBatch):
+        """Expand xdom/ydom if new data falls outside the current domain."""
+        margin = 0.05
+        
+        xdom_cur = self._ctx.metrics.xdom
+        ydom_cur = self._ctx.metrics.ydom
+        xmin, xmax = points[:,0].min(), points[:,0].max()    
+        ymin, ymax = points[:,1].min(), points[:,1].max()
+    
+        if xmin < xdom_cur[0] or xmax > xdom_cur[1]:
+            new_xdomain = (min(xmin, xdom_cur[0]), max(xmax, xdom_cur[1]))
+           
+            self.xdom = new_xdomain
+           
+            # new_xmargin = margin * (new_xdomain[1] - new_xdomain[0])
+            # self.xdom = (new_xdomain[0] - new_xmargin, new_xdomain[0] + new_xmargin)
+            
+        if ymin < ydom_cur[0] or ymax > ydom_cur[1]:
+            new_ydomain = (min(ymin, ydom_cur[0]), max(ymax, ydom_cur[1]))
+            
+            self.ydom = new_ydomain
+            
+            # new_ymargin = margin * (new_ydomain[1] - new_ydomain[0])
+            # self.ydom = (new_ydomain[0] - new_ymargin, new_ydomain[0] + new_ymargin)
+
     # ---- Settable metric properties
     @property
     def pos(self) -> npt.NDArray[np.int_]:
         return self._ctx.metrics.pos
 
     @pos.setter
-    def pos(self, val: CoordinatePair):
+    def pos(self, val: MetricCoordinatePair):
         self._ctx.metrics._pos = np.array(val, dtype=int)
         self._on_metrics_changed('pos')
 
@@ -94,7 +126,7 @@ class Canvas:
         return self._ctx.metrics.dim
 
     @dim.setter
-    def dim(self, val: CoordinatePair):
+    def dim(self, val: MetricCoordinatePair):
         self._ctx.metrics._dim = np.array(val, dtype=int)
         self._on_metrics_changed('dim')
 
@@ -123,7 +155,7 @@ class Canvas:
         return self._ctx.metrics.axes_xpad
 
     @axes_xpad.setter
-    def axes_xpad(self, val: CoordinatePair):
+    def axes_xpad(self, val: MetricCoordinatePair):
         self._ctx.metrics._axes_xpad = np.array(val, dtype=int)
         self._on_metrics_changed('xpad')
 
@@ -132,7 +164,7 @@ class Canvas:
         return self._ctx.metrics.axes_ypad
 
     @axes_ypad.setter
-    def axes_ypad(self, val: CoordinatePair):
+    def axes_ypad(self, val: MetricCoordinatePair):
         self._ctx.metrics._axes_ypad = np.array(val, dtype=int)
         self._on_metrics_changed('ypad')
 

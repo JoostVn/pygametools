@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from .types import CoordinatePair, CoordinateArray, Coordinates, Domain
+from .types import MetricCoordinatePair, MetricCoordinateArray, MetricCoordinates, Domain
 from typing import Literal
 import numpy.typing as npt
 import pygame
@@ -30,12 +30,12 @@ class PlotMetrics:
 
     def __init__(
             self,
-            pos: CoordinatePair,
-            dim: CoordinatePair,
+            pos: MetricCoordinatePair,
+            dim: MetricCoordinatePair,
             xdom: Domain,
             ydom: Domain,
-            axes_xpad: CoordinatePair=(40,10),
-            axes_ypad: CoordinatePair=(22,18)
+            axes_xpad: MetricCoordinatePair=(40,10),
+            axes_ypad: MetricCoordinatePair=(22,18)
             ):
         """
         Plain data container for shared Canvas layout metrics.
@@ -144,7 +144,7 @@ class PlotRenderer:
 
     def get_surface_pos(
             self,
-            pos: Coordinates,
+            pos: MetricCoordinates,
             on_axes: bool,
             metrics: PlotMetrics) -> tuple[pygame.Surface, npt.NDArray]:
         """
@@ -179,7 +179,7 @@ class PlotRenderer:
 
     def line(
             self,
-            pos: Coordinates,
+            pos: MetricCoordinates,
             col: tuple,
             metrics: PlotMetrics,
             width: int = 1,
@@ -190,8 +190,8 @@ class PlotRenderer:
 
     def vector(
             self,
-            pos: Coordinates,
-            vector: Coordinates,
+            pos: MetricCoordinates,
+            vector: MetricCoordinates,
             col: tuple,
             metrics: PlotMetrics,
             on_axes: bool = True):
@@ -205,10 +205,21 @@ class PlotRenderer:
         end = (draw_pos + np.asarray(vector)).astype(int)
         pygame.draw.line(draw_surface, col, tuple(draw_pos.astype(int)), tuple(end))
 
+    def point(
+            self,
+            pos: MetricCoordinates,
+            col: tuple,
+            metrics: PlotMetrics,
+            radius: int = 3,
+            on_axes: bool = True):
+        """Draw a filled circle at pos."""
+        draw_surface, draw_pos = self.get_surface_pos(pos, on_axes, metrics)
+        pygame.draw.circle(draw_surface, col, tuple(draw_pos.astype(int)), radius)
+
     def rect(
             self,
-            pos: Coordinates,
-            dim: Coordinates,
+            pos: MetricCoordinates,
+            dim: MetricCoordinates,
             metrics: PlotMetrics,
             facecol: tuple | None = None,
             linecol: tuple | None = None,
@@ -227,11 +238,11 @@ class PlotRenderer:
             text: str,
             font: pygame.font.Font,
             col: tuple,
-            pos: Coordinates,
+            pos: MetricCoordinates,
             ha: Literal["left", "center", "right"],
             va: Literal["top", "center", "bottom"],
             metrics: PlotMetrics,
-            offset: Coordinates = (0, 0),
+            offset: MetricCoordinates = (0, 0),
             on_axes: bool = True):
         """
         Args:
