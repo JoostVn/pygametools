@@ -100,15 +100,25 @@ class Canvas:
         xmin, xmax = points[:,0].min(), points[:,0].max()
         ymin, ymax = points[:,1].min(), points[:,1].max()
 
-        if xmin < xdom[0] or xmax > xdom[1]:
-            lo, hi = min(xmin, xdom[0]), max(xmax, xdom[1])
+        xmin_exceeded = xmin < xdom[0]
+        xmax_exceeded = xmax > xdom[1]
+        if xmin_exceeded or xmax_exceeded:
+            lo = min(xmin, xdom[0])
+            hi = max(xmax, xdom[1])
             pad = self.domain_margin * (hi - lo)
-            self.xdom = (lo - pad, hi + pad)
+            self.xdom = (
+                lo - pad if xmin_exceeded else lo,
+                hi + pad if xmax_exceeded else hi)
 
-        if ymin < ydom[0] or ymax > ydom[1]:
-            lo, hi = min(ymin, ydom[0]), max(ymax, ydom[1])
+        ymin_exceeded = ymin < ydom[0]
+        ymax_exceeded = ymax > ydom[1]
+        if ymin_exceeded or ymax_exceeded:
+            lo = min(ymin, ydom[0])
+            hi = max(ymax, ydom[1])
             pad = self.domain_margin * (hi - lo)
-            self.ydom = (lo - pad, hi + pad)
+            self.ydom = (
+                lo - pad if ymin_exceeded else lo,
+                hi + pad if ymax_exceeded else hi)
 
     # ---- Settable metric properties
     @property

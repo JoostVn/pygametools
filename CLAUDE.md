@@ -57,7 +57,10 @@ Some general formatting rules to keep in mind during the refactor:
     - Text labels for ticks.
     - Axis labels (single descriptive string per axis, X centered below tick labels, Y rotated 90°).
 
-6. Add `LinePlot`, `BarPlot`, and `ScatterPlot` plot types.
+6. Plot types:
+    - ✅ Implement `ScatterPlot`
+    - ✅ Implement `LinePlot`
+    - Implement `BarPlot`
 
 7. Implement domain auto-expansion.
     - In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
