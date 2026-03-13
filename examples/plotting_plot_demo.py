@@ -1,6 +1,6 @@
 import numpy as np
 from pygametools.color import Color
-from pygametools.plotting import Canvas, colorpreview, PlotTester
+from pygametools.plotting import Canvas, PlotTester
 from pygametools.plotting.plots import Line, Scatter, Bar, ArrayImage
 from PIL import Image, ImageSequence
 

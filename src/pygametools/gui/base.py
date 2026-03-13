@@ -47,14 +47,14 @@ class Ticker:
         """
         Returns all current stats values as a list of printeable strings
         """
-        t_min = self.hist.min().round(2)
-        t_max = self.hist.max().round(2)
-        t_avg = self.hist.mean().round(2)
+        t_min = int(10 * self.hist.min().round(2))
+        t_max = int(10 * self.hist.max().round(2))
+        t_avg = int(10 * self.hist.mean().round(2))
         stats_list = []
-        tick_str = 'load min/max/avg: '
-        tick_str += str(t_min if t_min < 1 else '>1,0').ljust(4) + '/'
-        tick_str += str(t_max if t_max < 1 else '>1.0').ljust(4) + '/'
-        tick_str += str(t_avg if t_avg < 1 else '>1.0').ljust(4)
+        tick_str = ''
+        tick_str += ('min:' + str(t_min if t_min <= 100 else 'OF').ljust(2, '0'))
+        tick_str += ('/max:' + str(t_max if t_max <= 100 else 'OF').ljust(2, '0'))
+        tick_str += ('/avg:' + str(t_avg if t_avg <= 100 else 'OF').ljust(2, '0'))
         stats_list.append(tick_str)
         return stats_list
 
