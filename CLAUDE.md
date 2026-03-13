@@ -43,15 +43,14 @@ Some general formatting rules to keep in mind during the refactor:
     - ✅ Remove the `_on_change` callback from `PlotMetrics`; Canvas setters write directly to `PlotMetrics` private attributes and call `_on_metrics_changed` themselves. Validation and numpy conversion move to Canvas setters.
     - ✅ `PlotMetrics` stores private attributes (`_xdom`, `_dim`, etc.) with public **getters only** (no public setters) so elements can read but not write. Derived computed properties (`axes_pos`, `axes_dim`, etc.) stay on `PlotMetrics` for internal element use.
     - ✅ Elements are read-only consumers of `PlotMetrics` — they receive `metrics` as a method argument and only read from it. This is enforced by convention; `_ctx` being private ensures external code cannot reach `metrics` at all.
-   
-
+    
 4. `PlotRenderer` refactor
     - ✅ Remove `parent_canvas` reference; `PlotRenderer.__init__` takes `dim` and `axes_dim` directly. Canvas calls `pr.resize(dim, axes_dim)` when metrics change.
     - ✅ Surface selection is internal to `PlotRenderer` (via `get_surface_pos` and `on_axes` flag).
-    - Replace the `on_axes: bool` flag pattern with two explicit draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates. Remove `get_surface_pos`.
-    - Extract coordinate conversion into `_graph_to_canvas(pos, metrics) -> CoordinatePair` as a private method on `PlotRenderer`.
     - Enforce strict input types: `CoordinatePair` for individual positions, `CoordinateArray` for bulk data. No implicit conversion. 
     - Decide whether to add numpy array to `Domain` in `types.py`.
+    - Replace the `on_axes: bool` flag pattern with two explicit draw method families: `draw_[shape]_canvas(...)` for canvas coordinates and `draw_[shape]_graph(...)` for graph coordinates. Remove `get_surface_pos`.
+    - Extract coordinate conversion into `_graph_to_canvas(pos, metrics) -> CoordinatePair` as a private method on `PlotRenderer`.
     - Make `metrics` the second positional argument (after `self`) in all draw methods for consistency.
 
 5. more features to the existing elements:

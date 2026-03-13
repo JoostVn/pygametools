@@ -62,6 +62,22 @@ class Canvas:
         # For all changes: call metric change on elements
         for element in self._elements:
             element.on_metrics_changed(metric_name, metrics)
+            
+    def draw(self, surface: pygame.Surface):
+        ctx = self._ctx
+        ctx.renderer.clear(ctx.theme)
+
+        # Border around the whole canvas
+        ctx.renderer.rect(
+            np.array([0, 0]), ctx.metrics.dim, ctx.metrics,
+            facecol=ctx.theme.colors["canvas_bg"],
+            linecol=ctx.theme.colors["canvas_line"],
+            on_axes=False)
+
+        for element in self._elements:
+            element.draw(ctx)
+
+        ctx.renderer.draw(surface, ctx.metrics)
 
     # ---- Settable metric properties
     @property
@@ -136,22 +152,6 @@ class Canvas:
     @property
     def ydom_span(self) -> float:
         return self._ctx.metrics.ydom_span
-
-    def draw(self, surface: pygame.Surface):
-        ctx = self._ctx
-        ctx.renderer.clear(ctx.theme)
-
-        # Border around the whole canvas
-        ctx.renderer.rect(
-            np.array([0, 0]), ctx.metrics.dim, ctx.metrics,
-            facecol=ctx.theme.colors["canvas_bg"],
-            linecol=ctx.theme.colors["canvas_line"],
-            on_axes=False)
-
-        for element in self._elements:
-            element.draw(ctx)
-
-        ctx.renderer.draw(surface, ctx.metrics)
 
 
 class Element(ABC):
