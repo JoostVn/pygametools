@@ -30,11 +30,11 @@ class Ticker:
         Records the used computational time of tick. Then pauses the programm
         until the time to next tick has elapsed.
         """
-        t = time.time() - self.tick_start
-        time.sleep(max(0, self.tick_len - t))
+        t_elapsed = time.perf_counter() - self.tick_start
+        time.sleep(max(0, self.tick_len - t_elapsed))
         self.i += 1
-        self.tick_start = time.time()
-        self.update_stats(t)
+        self.tick_start = time.perf_counter()
+        self.update_stats(t_elapsed)
 
     def update_stats(self, t):
         """
@@ -47,14 +47,14 @@ class Ticker:
         """
         Returns all current stats values as a list of printeable strings
         """
-        t_min = int(10 * self.hist.min().round(2))
-        t_max = int(10 * self.hist.max().round(2))
-        t_avg = int(10 * self.hist.mean().round(2))
+        t_min = int(100 * self.hist.min().round(2))
+        t_max = int(100 * self.hist.max().round(2))
+        t_avg = int(100 * self.hist.mean().round(2))
         stats_list = []
         tick_str = ''
-        tick_str += ('min:' + str(t_min if t_min <= 100 else 'OF').ljust(2, '0'))
-        tick_str += ('/max:' + str(t_max if t_max <= 100 else 'OF').ljust(2, '0'))
-        tick_str += ('/avg:' + str(t_avg if t_avg <= 100 else 'OF').ljust(2, '0'))
+        tick_str += ('min:' + str(t_min if t_min < 100 else 'OF').ljust(2, '0'))
+        tick_str += ('/max:' + str(t_max if t_max < 100 else 'OF').ljust(2, '0'))
+        tick_str += ('/avg:' + str(t_avg if t_avg < 100 else 'OF').ljust(2, '0'))
         stats_list.append(tick_str)
         return stats_list
 
@@ -94,7 +94,7 @@ class Application(ABC):
 
 
         # Class main settings
-        self.ticker = Ticker(start_time=time.time(), tick_len=tick_len)
+        self.ticker = Ticker(start_time=time.perf_counter(), tick_len=tick_len)
         self.window_size = np.array(window_size)
         self.container = Container()
 
