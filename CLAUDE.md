@@ -51,24 +51,35 @@ Some general formatting rules to keep in mind during the refactor:
     - Extract coordinate conversion into `_graph_to_canvas(pos, metrics) -> CoordinatePair` as a private method on `PlotRenderer`.
     - ✅ Make `metrics` the second positional argument (after `self`) in all draw methods for consistency.
 
-5. more features to the existing elements:
+5. Incremental rendering for plot elements.
+    - Split `PlotRenderer.clear()` into `clear_canvas()` and `clear_axes()`.
+    - Add `_redraw_incremental: bool` and `_redraw_full: bool` flags to `PlotType`.
+    - `add_data()` sets `_redraw_incremental = True`.
+    - `on_metrics_changed()` sets both `_redraw_incremental = True` and `_redraw_full = True`.
+    - Update `Canvas.draw()`: always call `clear_canvas()`; call `clear_axes()` and do a full redraw of all plot elements only if any plot has `_redraw_full = True`; otherwise draw only elements with `_redraw_incremental = True` on top of the existing `surface_axes`.
+    - For `LinePlot`, incremental draw calls `polyline` with only `self.data[-2:]` (last drawn point + new point) to draw only the new segment.
+    - Reset both flags on each plot element after drawing.
+
+6. more features to the existing elements:
     - Text labels for ticks.
     - Axis labels (single descriptive string per axis, X centered below tick labels, Y rotated 90°).
 
-6. Plot types:
+7. Plot types:
     - ✅ Implement `ScatterPlot`
     - ✅ Implement `LinePlot`
     - Implement `BarPlot`
+    - Implement `ArrayValPlot`
+    - Implement `ArrayRGBPlot`
 
-7. Implement domain auto-expansion.
-    - In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
-    - Implement `Canvas._check_domain_expansion(x, y)` that updates `metrics.xdom` / `metrics.ydom` when new data falls outside the current domain.
+8. Implement domain auto-expansion.
+    - ✅ In `Canvas.add_plot(plot)`, register an `_on_data_added` callback on the plot.
+    - ✅ Implement `Canvas._check_domain_expansion(x, y)` that updates `metrics.xdom` / `metrics.ydom` when new data falls outside the current domain.
 
-8. Complete `Legend` element (stub exists).
+9. Complete `Legend` element (stub exists).
 
-9. Implement `Grid` element.
+10. Implement `Grid` element.
 
-10. Improve the test/example script `examples\plots_dev.py`:
+11. Improve the test/example script `examples\plots_dev.py`:
     - ✅ GUI sliders for plot metrics for easy testing.
     - Dynamic and static data examples:
         - ✅ Random walk (dynamic line)
@@ -77,11 +88,11 @@ Some general formatting rules to keep in mind during the refactor:
         - Test image (static array)
         - ✅ Normal distribution draws (dynamic scatter)
 
-11. Make sure all type hinting is correct and consistent
+12. Make sure all type hinting is correct and consistent
 
-12. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
+13. Make sure docstrings of methods and classes reflect key design decisions (only when not obvious from the code).
 
-13. Further improvements:
+14. Further improvements:
     - Make sure the grid/axis ticks always include exacly 0 if it's in the domains.
 
 ## Dependency Tree
