@@ -141,95 +141,183 @@ class PlotRenderer:
             (metrics.axes_xpad[0], metrics.axes_ypad[0]))
         surface.blit(self.surface_canvas, tuple(metrics.pos))
 
-    def get_surface_pos(
+    def _graph_to_canvas(
             self,
-            metrics: PlotMetrics,
             pos: npt.ArrayLike,
-            on_axes: bool) -> tuple[pygame.Surface, npt.NDArray]:
+            metrics: PlotMetrics) -> npt.NDArray[np.int_]:
+        """Convert graph coordinates to axes-surface pixel coordinates.
+
+        Handles both a single point (shape (2,)) and arrays of points (shape
+        (N, 2)). Y axis is flipped: higher graph Y maps to lower pixel Y.
         """
-        Return either the canvas or axes surface and convert coordinates.
+        pos = np.asarray(pos, dtype=float)
+        rel_x = (pos[..., 0] - metrics.xdom[0]) / metrics.xdom_span
+        rel_y = 1.0 - (pos[..., 1] - metrics.ydom[0]) / metrics.ydom_span
+        return (np.stack([rel_x, rel_y], axis=-1) * metrics.axes_dim).astype(int)
 
-        If on_axes == False, return the canvas surface with pygame
-        coordinates, where (0,0) is the top left of canvas. If on_axes == True,
-        return the axes surface and convert graph coordinates to pygame
-        coordinates, where (0,0) is the top left of axes.
+    # ---- Internal helpers ----
+
+    def _draw_point(
+            self,
+            surface: pygame.Surface,
+            pos_px: npt.NDArray[np.int_],
+            col: tuple[int, int, int],
+            radius: int,
+            alpha: float):
+        """Draw an anti-aliased filled circle on a surface at pixel coordinates.
+
+        Uses a per-point SRCALPHA temp surface so that overlapping semi-transparent
+        circles accumulate opacity correctly via src-over compositing on blit.
         """
-        if not on_axes:
-            return self.surface_canvas, np.asarray(pos)
+        x, y = int(pos_px[0]), int(pos_px[1])
+        rgba = (*col[:3], int(round(255 * alpha)))
+        size = radius * 2 + 1
+        tmp = pygame.Surface((size, size), pygame.SRCALPHA)
+        pygame.gfxdraw.aacircle(tmp, radius, radius, radius, rgba)
+        pygame.gfxdraw.filled_circle(tmp, radius, radius, radius, rgba)
+        surface.blit(tmp, (x - radius, y - radius))
 
-        # Compute position of point as a ratio of domains
-        pos = np.asarray(pos)
-        relative_pos = np.array([
-            (pos[0] - metrics.xdom[0]) / metrics.xdom_span,
-            (pos[1] - metrics.ydom[0]) / metrics.ydom_span
-        ])
+    def _draw_text(
+            self,
+            surface: pygame.Surface,
+            text: str,
+            font: pygame.font.Font,
+            col: tuple[int, int, int],
+            pos_px: npt.NDArray,
+            ha: Literal["left", "center", "right"],
+            va: Literal["top", "center", "bottom"],
+            offset: npt.ArrayLike = (0, 0)):
+        """Render and blit text on a surface at pixel coordinates."""
+        text_block = font.render(text, True, col)
+        text_rect = text_block.get_rect()
+        x, y = np.asarray(pos_px) + offset
+        if ha == "center":
+            x = x - text_rect.width // 2
+        elif ha == "right":
+            x = x - text_rect.width
+        if va == "center":
+            y = y - text_rect.height // 2
+        elif va == "top":
+            y = y - text_rect.height
+        surface.blit(text_block, (x, y))
 
-        # Reverse y coordinate (graph y-up --> pygame y-down)
-        if relative_pos.ndim == 2:
-            relative_pos[:,1] = 1 - relative_pos[:,1]
-        else:
-            relative_pos[1] = 1 - relative_pos[1]
+    # ---- Canvas-coordinate draw methods ----
 
-        pos_axes = (metrics.axes_dim * relative_pos).astype(int)
-        return self.surface_axes, pos_axes
-
-    def circle(self, on_axes=True):
+    def draw_circle_canvas(
+            self,
+            pos: npt.ArrayLike,
+            col: tuple[int, int, int],
+            radius: int):
         raise NotImplementedError
 
-    def line(
+    def draw_line_canvas(
+            self,
+            pos: npt.ArrayLike,
+            col: tuple[int, int, int]):
+        """Draw an anti-aliased line between two canvas-coordinate points [[x1,y1],[x2,y2]]."""
+        pos = np.asarray(pos)
+        pygame.draw.aaline(
+            self.surface_canvas, col,
+            tuple(pos[0].astype(int)), tuple(pos[1].astype(int)))
+
+    def draw_vector_canvas(
+            self,
+            pos: npt.ArrayLike,
+            vector: npt.ArrayLike,
+            col: tuple[int, int, int]):
+        """Draw a line from pos to pos+vector in canvas coordinates.
+
+        vector is always a pixel offset; useful for fixed-size elements like axis ticks.
+        """
+        pos = np.asarray(pos)
+        end = (pos + np.asarray(vector)).astype(int)
+        pygame.draw.line(self.surface_canvas, col, tuple(pos.astype(int)), tuple(end))
+
+    def draw_point_canvas(
+            self,
+            pos: npt.ArrayLike,
+            col: tuple[int, int, int],
+            radius: int,
+            alpha: float = 1):
+        """Draw an anti-aliased filled circle at a canvas-coordinate position."""
+        self._draw_point(self.surface_canvas, np.asarray(pos), col, radius, alpha)
+
+    def draw_polyline_canvas(
+            self,
+            points: npt.ArrayLike,
+            col: tuple[int, int, int]):
+        """Draw a connected polyline through an (N, 2) array of canvas-coordinate points."""
+        pts = np.asarray(points, dtype=int)
+        if len(pts) < 2:
+            return
+        pygame.draw.aalines(self.surface_canvas, col, False, pts.tolist())
+
+    def draw_rect_canvas(
+            self,
+            pos: npt.ArrayLike,
+            dim: npt.ArrayLike,
+            facecol: tuple[int, int, int] | None = None,
+            linecol: tuple[int, int, int] | None = None):
+        """Draw a rectangle at a canvas-coordinate position."""
+        rect = pygame.Rect(*np.asarray(pos).astype(int), *dim)
+        if facecol is not None:
+            pygame.draw.rect(self.surface_canvas, facecol, rect)
+        if linecol is not None:
+            pygame.draw.rect(self.surface_canvas, linecol, rect, width=1)
+
+    def draw_text_canvas(
+            self,
+            text: str,
+            font: pygame.font.Font,
+            col: tuple[int, int, int],
+            pos: npt.ArrayLike,
+            ha: Literal["left", "center", "right"],
+            va: Literal["top", "center", "bottom"],
+            offset: npt.ArrayLike = (0, 0)):
+        """Render text at a canvas-coordinate position."""
+        self._draw_text(self.surface_canvas, text, font, col, np.asarray(pos), ha, va, offset)
+
+    # ---- Graph-coordinate draw methods ----
+
+    def draw_circle_graph(
             self,
             metrics: PlotMetrics,
             pos: npt.ArrayLike,
             col: tuple[int, int, int],
-            on_axes: bool = True):
-        """Draw a line between two points in pos given as [[x1, y1], [x2, y2]]."""
-        draw_surface, draw_pos = self.get_surface_pos(metrics, pos, on_axes)
-        p1, p2 = tuple(draw_pos[0].astype(int)), tuple(draw_pos[1].astype(int))
-        pygame.draw.aaline(draw_surface, col, p1, p2)
-       
+            radius: int):
+        raise NotImplementedError
 
-    def vector(
+    def draw_line_graph(
+            self,
+            metrics: PlotMetrics,
+            pos: npt.ArrayLike,
+            col: tuple[int, int, int]):
+        """Draw an anti-aliased line between two graph-coordinate points [[x1,y1],[x2,y2]]."""
+        pts = self._graph_to_canvas(np.asarray(pos, dtype=float), metrics)
+        pygame.draw.aaline(self.surface_axes, col, tuple(pts[0]), tuple(pts[1]))
+
+    def draw_vector_graph(
             self,
             metrics: PlotMetrics,
             pos: npt.ArrayLike,
             vector: npt.ArrayLike,
-            col: tuple[int, int, int],
-            on_axes: bool = True):
-        """
-        Draw a vector from a given pos and direction.
-
-        pos can be in graph or canvas coordinates; vector is always in pygame
-        coordinates. Useful for fixed-size elements like axis ticks.
-        """
-        draw_surface, draw_pos = self.get_surface_pos(metrics, pos, on_axes)
+            col: tuple[int, int, int]):
+        """Draw a line from pos to pos+vector; pos in graph coordinates, vector in pixels."""
+        draw_pos = self._graph_to_canvas(pos, metrics)
         end = (draw_pos + np.asarray(vector)).astype(int)
-        pygame.draw.line(draw_surface, col, tuple(draw_pos.astype(int)), tuple(end))
+        pygame.draw.line(self.surface_axes, col, tuple(draw_pos), tuple(end))
 
-    def point(
+    def draw_point_graph(
             self,
             metrics: PlotMetrics,
             pos: npt.ArrayLike,
             col: tuple[int, int, int],
             radius: int,
-            alpha: float = 1,
-            on_axes: bool = True):
-        """Draw an anti-aliased filled circle at pos.
+            alpha: float = 1):
+        """Draw an anti-aliased filled circle at a graph-coordinate position."""
+        self._draw_point(self.surface_axes, self._graph_to_canvas(pos, metrics), col, radius, alpha)
 
-        Uses a per-point SRCALPHA temp surface so that overlapping semi-transparent
-        circles accumulate opacity correctly via src-over compositing on blit.
-        """
-        draw_surface, draw_pos = self.get_surface_pos(metrics, pos, on_axes)
-        x, y = tuple(draw_pos.astype(int))
-        rgba = (*col[:3], int(round(255 * alpha)))
-        size = radius * 2 + 1
-        tmp = pygame.Surface((size, size), pygame.SRCALPHA)
-        
-        pygame.gfxdraw.aacircle(tmp, radius, radius, radius, rgba)
-        pygame.gfxdraw.filled_circle(tmp, radius, radius, radius, rgba)
-        
-        draw_surface.blit(tmp, (x - radius, y - radius))
-
-    def polyline(
+    def draw_polyline_graph(
             self,
             metrics: PlotMetrics,
             points: npt.ArrayLike,
@@ -238,29 +326,29 @@ class PlotRenderer:
         pts = np.asarray(points, dtype=float)
         if len(pts) < 2:
             return
-        rel_x = (pts[:, 0] - metrics.xdom[0]) / metrics.xdom_span
-        rel_y = 1.0 - (pts[:, 1] - metrics.ydom[0]) / metrics.ydom_span
-        pixel_pts = (np.column_stack([rel_x, rel_y]) * metrics.axes_dim).astype(int).tolist()
-        pygame.draw.aalines(self.surface_axes, col, False, pixel_pts)
+        pygame.draw.aalines(self.surface_axes, col, False, self._graph_to_canvas(pts, metrics).tolist())
 
-    def rect(
+    def draw_rect_graph(
             self,
             metrics: PlotMetrics,
             pos: npt.ArrayLike,
             dim: npt.ArrayLike,
             facecol: tuple[int, int, int] | None = None,
-            linecol: tuple[int, int, int] | None = None,
-            on_axes: bool = True):
-
-        draw_surface, draw_pos = self.get_surface_pos(metrics, pos, on_axes)
-        rect = pygame.Rect(*draw_pos, *dim)
-
+            linecol: tuple[int, int, int] | None = None):
+        """Draw a rectangle; pos is the bottom-left corner and dim is (width, height), both in graph coordinates."""
+        pos = np.asarray(pos, dtype=float)
+        dim = np.asarray(dim, dtype=float)
+        bl_px = self._graph_to_canvas(pos, metrics)
+        tr_px = self._graph_to_canvas(pos + dim, metrics)
+        top_left = np.minimum(bl_px, tr_px)
+        size = np.abs(tr_px - bl_px)
+        rect = pygame.Rect(*top_left, *size)
         if facecol is not None:
-            pygame.draw.rect(draw_surface, facecol, rect)
+            pygame.draw.rect(self.surface_axes, facecol, rect)
         if linecol is not None:
-            pygame.draw.rect(draw_surface, linecol, rect, width=1)
+            pygame.draw.rect(self.surface_axes, linecol, rect, width=1)
 
-    def text(
+    def draw_text_graph(
             self,
             metrics: PlotMetrics,
             text: str,
@@ -269,37 +357,9 @@ class PlotRenderer:
             pos: npt.ArrayLike,
             ha: Literal["left", "center", "right"],
             va: Literal["top", "center", "bottom"],
-            offset: npt.ArrayLike = (0, 0),
-            on_axes: bool = True):
-        """
-        Args:
-            ha: horizontal alignment
-            va: vertical alignment
-            offset : TYPE, optional
-                Offset in Pygame coordinates. Useful when drawing text with graph
-                coordinates that needs to be slightly but contantly ofsset to
-                prevent overlap with data or ticks. The default is (0,0).
-        """
-
-        draw_surface, draw_pos = self.get_surface_pos(metrics, pos, on_axes)
-
-        text_block = font.render(text, True, col)
-        text_rect = text_block.get_rect()
-        x, y = draw_pos + offset
-
-        # Horizontal alignment
-        if ha == "center":
-            x = x - text_rect.width // 2
-        elif ha == "right":
-            x = x - text_rect.width
-
-        # Vertical alignment
-        if va == "center":
-            y = y - text_rect.height // 2
-        elif va == "top":
-            y = y - text_rect.height
-
-        draw_surface.blit(text_block, (x, y))
+            offset: npt.ArrayLike = (0, 0)):
+        """Render text at a graph-coordinate position."""
+        self._draw_text(self.surface_axes, text, font, col, self._graph_to_canvas(pos, metrics), ha, va, offset)
 
 
 @dataclass

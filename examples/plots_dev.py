@@ -160,7 +160,7 @@ def main():
     scatterplot = ScatterPlot(Color.BLUE2, 'scatter_test', radius=1, alpha=0.5)
 
     def update_scatterplot():
-        scatterplot.add_data(np.random.normal(0, 1, (100,2)))
+        scatterplot.add_data(np.random.normal(0, 1, (5,2)))
 
     app.add_plot_funcs(update_scatterplot)
     canvas.add_plot(scatterplot)

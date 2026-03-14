@@ -70,11 +70,10 @@ class Canvas:
         ctx.renderer.clear(ctx.theme)
 
         # Border around the whole canvas
-        ctx.renderer.rect(
-            ctx.metrics, np.array([0, 0]), ctx.metrics.dim,
+        ctx.renderer.draw_rect_canvas(
+            np.array([0, 0]), ctx.metrics.dim,
             facecol=ctx.theme.colors["canvas_bg"],
-            linecol=ctx.theme.colors["canvas_line"],
-            on_axes=False)
+            linecol=ctx.theme.colors["canvas_line"])
 
         for element in self._elements:
             element.draw(ctx)
@@ -228,11 +227,10 @@ class Axes(Element):
             self.dim = metrics.axes_dim
 
     def draw(self, ctx: DrawContext):
-        ctx.renderer.rect(
-            ctx.metrics, ctx.metrics.axes_pos - 1, ctx.metrics.axes_dim + 2,
+        ctx.renderer.draw_rect_canvas(
+            ctx.metrics.axes_pos - 1, ctx.metrics.axes_dim + 2,
             facecol=ctx.theme.colors["axes_bg"],
-            linecol=ctx.theme.colors["axes_line"],
-            on_axes=False)
+            linecol=ctx.theme.colors["axes_line"])
 
 
 class Axis(Element):
@@ -307,12 +305,10 @@ class Axis(Element):
         text_offset = self.tick_direction * (2 + self.tick_length)
 
         for pos, label in zip(self._tick_pos, self._labels):
-            ctx.renderer.vector(
-                ctx.metrics, pos, tick_vector, ctx.theme.colors["axes_line"],
-                on_axes=False)
-            ctx.renderer.text(
-                ctx.metrics, label, font, color, pos,
-                self.text_ha, self.text_va, text_offset, on_axes=False)    
+            ctx.renderer.draw_vector_canvas(
+                pos, tick_vector, ctx.theme.colors["axes_line"])
+            ctx.renderer.draw_text_canvas(
+                label, font, color, pos, self.text_ha, self.text_va, text_offset)    
     
     # ---- Properties settable from the API
     @property
@@ -417,9 +413,8 @@ class Title(Element):
 
     def draw(self, ctx: DrawContext):
         font, color = ctx.theme.fonts["title"]
-        ctx.renderer.text(
-            ctx.metrics, self.title, font, color, self.pos,
-            ha="center", va="center", on_axes=False)
+        ctx.renderer.draw_text_canvas(
+            self.title, font, color, self.pos, ha="center", va="center")
 
 
 class Legend(Element):
