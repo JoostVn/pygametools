@@ -1,3 +1,5 @@
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import pygame
 import numpy as np
 import time
@@ -50,11 +52,12 @@ class Ticker:
         t_min = int(100 * self.hist.min().round(2))
         t_max = int(100 * self.hist.max().round(2))
         t_avg = int(100 * self.hist.mean().round(2))
+        
         stats_list = []
         tick_str = ''
-        tick_str += ('min:' + str(t_min if t_min < 100 else 'OF').ljust(2, '0'))
-        tick_str += ('/max:' + str(t_max if t_max < 100 else 'OF').ljust(2, '0'))
-        tick_str += ('/avg:' + str(t_avg if t_avg < 100 else 'OF').ljust(2, '0'))
+        tick_str += ('min:' + str(t_min if t_min < 100 else 'OF').rjust(2, '0'))
+        tick_str += ('/max:' + str(t_max if t_max < 100 else 'OF').rjust(2, '0'))
+        tick_str += ('/avg:' + str(t_avg if t_avg < 100 else 'OF').rjust(2, '0'))
         stats_list.append(tick_str)
         return stats_list
 
@@ -85,7 +88,9 @@ class Application(ABC):
 
         """
         # Pygame init and window settings
-        pygame.init()
+        # pygame.init()
+        pygame.font.init()
+        
         pygame.display.set_caption(name)
 
         icon_path = files("pygametools.gui.icons").joinpath(f"icon.png")
@@ -213,7 +218,7 @@ class Application(ABC):
         self.screen.fill(self.theme['background'])
         self.draw()
         self.container.draw(self.screen)
-        self.display_textlist(self.ticker.get_stats(), self.theme['5'], 5, self.window_size[1]-15)
+        self.display_textlist(self.ticker.get_stats(), self.theme['2'], 10, self.window_size[1]-15)
         pygame.display.flip()
 
     def set_gui(self, elements):
@@ -301,7 +306,7 @@ class Container:
 
     def update(self, key_events, mouse_pos):
 
-        # Find any active or triggered element, only update it and return
+        # Find any already active or triggered element, only update it and return
         for element in self.elements:
             if element.state in (State.ACTIVE, State.TRIGGERED):
                 element.update(key_events, mouse_pos)

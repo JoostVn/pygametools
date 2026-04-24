@@ -1,8 +1,11 @@
-from dataclasses import dataclass
-from typing import Literal
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 import numpy.typing as npt
 import pygame
 import pygame.gfxdraw
+
+from dataclasses import dataclass
+from typing import Literal
 import numpy as np
 from pygametools.color import Color
 from pygametools.fonts import load_font

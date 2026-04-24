@@ -1,7 +1,7 @@
-import pygame
 from pygametools.color.color import Color
 from pygametools.gui.base import Application
 from pygametools.gui.elements import Button, Slider, Label
+import pygame
 import numpy as np
 from numba import jit, float64, int32, int64, boolean, prange
 from math import pi, cos, sin, ceil
