@@ -128,7 +128,7 @@ class Simulation:
         self.angle_nudge = 0.2
         self.avoidance = 0.5
         self.mouse_range = 100
-        self.mouse_strenght = 2
+        self.mouse_strength = 2
 
         # Num bots and num bot groups
         self._num_bots = 1
@@ -211,7 +211,7 @@ class Simulation:
 
     def update_bot_counts(self):
         """
-        Called when the number of bots/groups are updateted to re-determine memberships.
+        re-determine memberships when the number of bots/groups is changed.
         """
         # Update bot membership and deal with uneven bot group counts
         bot_membership = np.repeat(self.group_idx, self.min_num_bots_per_group)
@@ -223,7 +223,7 @@ class Simulation:
         delta_num_groups = self._num_bot_groups - self.group_trails.shape[0]
         delta_num_bots = self._num_bots - self.bot_pos.shape[0]
 
-        # Update pos and prev pos
+        # Update pos and prev pos for the new bots
         if delta_num_bots > 0:
             new_pos = np.random.uniform((0,0), self.env_dim, (delta_num_bots, 2))
             self.bot_pos = np.vstack((self.bot_pos, new_pos))
@@ -234,14 +234,14 @@ class Simulation:
             self.bot_pos = self.bot_pos[:self._num_bots]
             self.bot_prev_pos = self.bot_prev_pos[:self._num_bots]
 
-        # Update angles
+        # Update angles for the new bots
         if delta_num_bots > 0:
             new_angles = np.random.uniform(0, 2*pi, size=delta_num_bots)
             self.bot_angles = np.hstack((self.bot_angles, new_angles))
         else:
             self.bot_angles = self.bot_angles[:self._num_bots]
 
-        # Update trails
+        # Update trails for the new bots
         if delta_num_groups > 0:
             new_trails = np.zeros((delta_num_groups, *self.group_trails.shape[1:]))
             self.group_trails = np.vstack((self.group_trails, new_trails))
@@ -256,7 +256,7 @@ class Simulation:
             self.group_col = self.group_col[:self._num_bot_groups]
 
     # Simulation methods
-    def update(self, enable_mouse_interation: bool=False):
+    def update(self, enable_mouse_interaction: bool=False):
 
         # Save previous bot positions
         self.bot_prev_pos[:] = self.bot_pos
@@ -291,7 +291,7 @@ class Simulation:
 
 
         # Interaction with mouse (pull/push bots from the current mouse pos)
-        if enable_mouse_interation:
+        if enable_mouse_interaction:
     
             # Calculate bot-mouse distance and a linear distance factor (1 = closest)
             bot_mouse_vec = np.reshape(self.mouse_pos, (1,2)) - self.bot_pos
@@ -307,11 +307,11 @@ class Simulation:
     
             # Adjust positions and nudge angles
             if self.mouse_hold_left:
-                self.bot_pos = self.bot_pos + dist_factor * self.mouse_strenght * bot_mouse_vec_unit
+                self.bot_pos = self.bot_pos + dist_factor * self.mouse_strength * bot_mouse_vec_unit
                 self.bot_angles = self.bot_angles + 0.1 * dist_factor.flatten() * bot_mouse_angle_delta
 
             if self.mouse_hold_right:
-                self.bot_pos = self.bot_pos - dist_factor * self.mouse_strenght * bot_mouse_vec_unit
+                self.bot_pos = self.bot_pos - dist_factor * self.mouse_strength * bot_mouse_vec_unit
                 self.bot_angles = self.bot_angles - 0.1 * dist_factor.flatten() * bot_mouse_angle_delta
 
         # Randomly adjust bot angles
@@ -393,9 +393,9 @@ class App(Application):
 
     def update(self):
         self.simulation.update(
-            enable_mouse_interation=(not self.container.is_active))
+            enable_mouse_interaction=(not self.container.is_active))
 
-        # Calucate mouse pos adjusted by zoom and pan offset and pass to simulation
+        # Calculate mouse pos adjusted by zoom and pan offset and pass to simulation
         self.simulation.mouse_pos = self.mouse_pos_draw
 
         if pygame.BUTTON_RIGHT in self.key_events['hold']:
@@ -430,7 +430,7 @@ def main():
             simulation,
             'brightness',
             domain=(0, 1),
-            default=0.5,
+            default=0.1,
             pos=(10, 10),
             width=ui_width,
             height=20,
@@ -470,7 +470,7 @@ def main():
             simulation,
             'num_bots',
             domain=(1, 10000),
-            default=10,
+            default=1,
             pos=(10, 70),
             width=ui_width,
             height=20,
@@ -537,7 +537,7 @@ def main():
             theme_name=theme),
         Slider(
             simulation,
-            'mouse_strenght',
+            'mouse_strength',
             domain=(0, 5),
             default=1,
             pos=(10, 160),
